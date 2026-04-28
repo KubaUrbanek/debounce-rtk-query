@@ -12,40 +12,15 @@ export function useDebouncedMutation<TArg, TResult>(
   delay: number,
   trigger: MutationTrigger<TArg, TResult>,
   onSuccess: (result: TResult) => void,
-  options?: {
-    enabled?: boolean;
-    skipIf?: (value: TArg) => boolean;
-    onError?: (error: unknown) => void;
-  }
+  onError?: (error: unknown) => void
 ) {
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const inFlightRef = useRef<MutationHandle<TResult> | null>(null);
   const requestIdRef = useRef(0);
 
-  const onSuccessRef = useRef(onSuccess);
-  const onErrorRef = useRef(options?.onError);
-
   useEffect(() => {
-    onSuccessRef.current = onSuccess;
-  }, [onSuccess]);
-
-  useEffect(() => {
-    onErrorRef.current = options?.onError;
-  }, [options?.onError]);
-
-  useEffect(() => {
-    const enabled = options?.enabled !== false;
-    const shouldSkip = options?.skipIf?.(value) ?? false;
-
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
-      timeoutRef.current = null;
-    }
-
-    if (!enabled || shouldSkip) {
-      inFlightRef.current?.abort();
-      inFlightRef.current = null;
-      return;
     }
 
     timeoutRef.current = setTimeout(() => {
@@ -53,13 +28,12 @@ export function useDebouncedMutation<TArg, TResult>(
       const requestId = requestIdRef.current;
 
       inFlightRef.current?.abort();
-      inFlightRef.current = null;
 
       let mutation: MutationHandle<TResult>;
       try {
         mutation = trigger(value);
-      } catch (error) {
-        onErrorRef.current?.(error);
+      } catch (err) {
+        onError?.(err);
         return;
       }
 
@@ -69,14 +43,12 @@ export function useDebouncedMutation<TArg, TResult>(
         .unwrap()
         .then((result) => {
           if (requestId === requestIdRef.current) {
-            onSuccessRef.current(result);
+            onSuccess(result);
           }
         })
-        .catch((error: unknown) => {
-          if (
-            !(error instanceof DOMException && error.name === "AbortError")
-          ) {
-            onErrorRef.current?.(error);
+        .catch((err) => {
+          if (!(err instanceof DOMException && err.name === "AbortError")) {
+            onError?.(err);
           }
         })
         .finally(() => {
@@ -89,10 +61,9 @@ export function useDebouncedMutation<TArg, TResult>(
     return () => {
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current);
-        timeoutRef.current = null;
       }
     };
-  }, [value, delay, trigger, options?.enabled, options?.skipIf]);
+  }, [value, delay, trigger, onSuccess, onError]);
 
   useEffect(() => {
     return () => {
