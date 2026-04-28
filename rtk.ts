@@ -1,21 +1,24 @@
 import { useEffect, useRef } from "react";
 
-type MutationHandle<TResult> = {
+type RTKMutationHandle<TResult> = Promise<
+  { data: TResult } | { error: unknown }
+> & {
   abort: () => void;
   unwrap: () => Promise<TResult>;
+  reset: () => void;
 };
 
-type MutationTrigger<TArg, TResult> = (arg: TArg) => MutationHandle<TResult>;
+type RTKMutationTrigger<TArg, TResult> = (arg: TArg) => RTKMutationHandle<TResult>;
 
 export function useDebouncedMutation<TArg, TResult>(
   value: TArg,
   delay: number,
-  trigger: MutationTrigger<TArg, TResult>,
+  trigger: RTKMutationTrigger<TArg, TResult>,
   onSuccess: (result: TResult) => void,
   onError?: (error: unknown) => void
 ) {
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const inFlightRef = useRef<MutationHandle<TResult> | null>(null);
+  const inFlightRef = useRef<RTKMutationHandle<TResult> | null>(null);
   const requestIdRef = useRef(0);
 
   useEffect(() => {
@@ -29,7 +32,7 @@ export function useDebouncedMutation<TArg, TResult>(
 
       inFlightRef.current?.abort();
 
-      let mutation: MutationHandle<TResult>;
+      let mutation: RTKMutationHandle<TResult>;
       try {
         mutation = trigger(value);
       } catch (err) {
