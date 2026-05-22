@@ -1,0 +1,61 @@
+import { RefObject, useLayoutEffect, useState } from "react";
+
+type Options = {
+  popupSelector?: string;
+  enabled?: boolean;
+};
+
+function overlaps(a: DOMRect, b: DOMRect) {
+  return (
+    a.left < b.right &&
+    a.right > b.left &&
+    a.top < b.bottom &&
+    a.bottom > b.top
+  );
+}
+
+export function usePanelOverlap(
+  panelRef: RefObject<HTMLElement>,
+  { popupSelector = "[data-popup]", enabled = true }: Options = {}
+) {
+  const [isOverlapping, setIsOverlapping] = useState(false);
+
+  useLayoutEffect(() => {
+    if (!enabled) {
+      setIsOverlapping(false);
+      return;
+    }
+
+    const panel = panelRef.current;
+    if (!panel) return;
+
+    const check = () => {
+      const panelRect = panel.getBoundingClientRect();
+      const popups = document.querySelectorAll<HTMLElement>(popupSelector);
+
+      for (const popup of popups) {
+        if (!popup.isConnected) continue;
+
+        const popupRect = popup.getBoundingClientRect();
+        if (overlaps(panelRect, popupRect)) {
+          setIsOverlapping(true);
+          return;
+        }
+      }
+
+      setIsOverlapping(false);
+    };
+
+    check();
+
+    window.addEventListener("resize", check);
+    window.addEventListener("scroll", check, true);
+
+    return () => {
+      window.removeEventListener("resize", check);
+      window.removeEventListener("scroll", check, true);
+    };
+  }, [panelRef, popupSelector, enabled]);
+
+  return isOverlapping;
+}
