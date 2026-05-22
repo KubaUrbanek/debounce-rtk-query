@@ -1,8 +1,9 @@
-import { RefObject, useLayoutEffect, useState } from "react";
+import { RefObject, useLayoutEffect } from "react";
 
 type Options = {
   popupSelector?: string;
-  enabled?: boolean;
+  elevatedZIndex?: number;
+  normalZIndex?: number;
 };
 
 function overlaps(a: DOMRect, b: DOMRect) {
@@ -14,48 +15,62 @@ function overlaps(a: DOMRect, b: DOMRect) {
   );
 }
 
-export function usePanelOverlap(
+export function useElevateOverlappingPopups(
   panelRef: RefObject<HTMLElement>,
-  { popupSelector = "[data-popup]", enabled = true }: Options = {}
+  {
+    popupSelector = "[data-popup]",
+    normalZIndex = 1000,
+    elevatedZIndex = 3000,
+  }: Options = {}
 ) {
-  const [isOverlapping, setIsOverlapping] = useState(false);
-
   useLayoutEffect(() => {
-    if (!enabled) {
-      setIsOverlapping(false);
-      return;
-    }
-
     const panel = panelRef.current;
+
     if (!panel) return;
 
     const check = () => {
       const panelRect = panel.getBoundingClientRect();
-      const popups = document.querySelectorAll<HTMLElement>(popupSelector);
+
+      const popups = document.querySelectorAll<HTMLElement>(
+        popupSelector
+      );
 
       for (const popup of popups) {
-        if (!popup.isConnected) continue;
-
         const popupRect = popup.getBoundingClientRect();
-        if (overlaps(panelRect, popupRect)) {
-          setIsOverlapping(true);
-          return;
-        }
-      }
 
-      setIsOverlapping(false);
+        const isOverlapping = overlaps(
+          panelRect,
+          popupRect
+        );
+
+        popup.style.zIndex = isOverlapping
+          ? String(elevatedZIndex)
+          : String(normalZIndex);
+      }
     };
 
     check();
+
+    const observer = new MutationObserver(check);
+
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+    });
 
     window.addEventListener("resize", check);
     window.addEventListener("scroll", check, true);
 
     return () => {
+      observer.disconnect();
+
       window.removeEventListener("resize", check);
       window.removeEventListener("scroll", check, true);
     };
-  }, [panelRef, popupSelector, enabled]);
-
-  return isOverlapping;
+  }, [
+    panelRef,
+    popupSelector,
+    normalZIndex,
+    elevatedZIndex,
+  ]);
 }
