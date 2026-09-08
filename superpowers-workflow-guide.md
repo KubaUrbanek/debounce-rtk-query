@@ -1,424 +1,289 @@
 # Personal OpenCode + Superpowers Workflow
 
-Version 1.1 · 8 September 2026
+Version 2.0 · 8 September 2026
 
-## 1. Purpose and implementation status
+## Purpose and installation status
 
-This guide defines the agreed personal workflow: deliberate planning, lower-cost implementation, independent review, separate testing, and separately requested domain documentation for future coding agents. It is technology-neutral.
+This technology-neutral setup uses two models and six explicit commands. It offers a full planned flow, a short follow-up flow, and an ephemeral flow for small actions. Documentation describes domain concepts and current behavior for future coding agents.
 
-**Status:** this is the operating specification for the updated installer, which includes `/sp-plan`, `/sdd`, `/sp-tests` and `/sp-docs`. Run the updated `install-superpowers-flow.sh` to install or update your configuration, then restart OpenCode. Existing task artifacts are preserved. The installer passed syntax checks and 13 isolated tests; remote installation was simulated and model behavior has not been tested end to end.
-
-The target setup uses the standard Superpowers plugin, two configured model IDs, custom agents and four custom OpenCode commands. It deliberately overrides Superpowers defaults concerning automatic activation, TDD, worktrees, commits and artifact locations. These are personal workflow rules, not claims about stock Superpowers behavior.
-
-## 2. Quick start
-
-Start OpenCode inside the repository and on the branch you want to modify. Existing staged, unstaged and untracked changes are allowed.
-
-1. Run `/sp-plan <task description>`.
-2. Discuss requirements and approve the proposed design. Review the saved design when requested.
-3. Receive an implementation plan and a separate test-scenario document. Read them before execution.
-4. Run `/sdd <task-directory>` to authorize implementation of that plan.
-5. Inspect the implementation and compilation result. No tests have been written, changed or run.
-6. When ready, run `/sp-tests <task-directory>` to generate, adapt and run tests.
-7. When ready, run `/sp-docs <task-directory>` to write domain documentation for future coding agents.
-8. Request commits or other Git operations explicitly when desired.
-
-There is no automatic transition between phases. You may pause between phases or execute the next phase in a new session. `/sp-docs <feature or scope description>` can also document an existing feature independently, without a previous plan. The documentation phase neither checks nor requires evidence that tests were run; the user chooses when to invoke it.
-
-## 3. Activation and ordinary work
-
-Superpowers workflow behavior is inactive by default. Only `/sp-plan`, `/sdd`, `/sp-tests` and `/sp-docs` activate it for the identified task and phase. This activation also applies to subagents explicitly delegated work within that phase.
-
-Mentioning Superpowers, opening a plan file, asking a question about the workflow or having an unfinished task directory does not activate it. Directly selecting a workflow agent is not a substitute for invoking a phase command.
-
-After completion or cancellation, the phase is inactive. Follow-up discussion can clarify its results, but new implementation, testing or workflow documentation work requires the corresponding command. During a running phase, answers and corrections remain part of that phase.
-
-Ordinary work uses `build` on the low model. It does not automatically start this workflow or generate its documents. It does not create, modify or run tests unless explicitly requested. Small edits do not require subagents or a planning document.
-
-All agent communication, generated task documents and reports are in English. Follow existing project conventions for source code identifiers and user-facing product language; do not translate the application merely because agent communication is English.
-
-### What the global activation rule does—and does not do
-
-The standard plugin still loads bootstrap instructions into context. The global `AGENTS.md` instructs the model when to use the workflow; it does not unload the plugin or eliminate that context cost. Superpowers explicitly gives user instructions, including `AGENTS.md`, precedence over its skills. This is instruction-based control, not an absolute technical guarantee. [Superpowers instruction precedence](https://github.com/obra/superpowers/blob/main/skills/using-superpowers/SKILL.md#user-instructions)
-
-## 4. Setup responsibilities
-
-The installer asks for two exact OpenCode model identifiers:
-
-- **high:** planning, coordination, reviews and difficult implementation.
-- **low:** ordinary work, bounded implementation, test writing, domain documentation and focused exploration.
-
-These are labels used in this guide, not literal OpenCode model IDs. Select actual `provider/model-id` values available through your configured providers. The setup does not create provider credentials or grant access to a model.
-
-Useful terminal checks:
+The updated `install-superpowers-flow.sh` implements this configuration. Download it, close OpenCode, run it without sudo, then reopen OpenCode in the relevant repository:
 
 ```bash
-opencode --version
-opencode models
+bash install-superpowers-flow.sh
 ```
 
-The installer must preserve existing provider configuration and unrelated settings, back up files it changes, and print the actual installation and backup paths. It must not silently retain obsolete permissions or prompts for agents it manages. Global rules added to an existing `AGENTS.md` should be clearly delimited and replaceable without discarding unrelated instructions.
+The installer asks for exact high and low model IDs in `provider/model-id` format. It installs OpenCode when absent, configures the standard Superpowers plugin, assigns agents and permissions, and backs up managed files before updating them. Provider configuration and unrelated settings are preserved. Provider authentication remains separate if needed.
 
-### Configuration layout
+Requirements: macOS/Linux/WSL, Python 3.9+, curl and Git. No npm, pip or sudo is required by this installer. The upstream OpenCode installer may require its usual platform utilities. Use `--help` for model arguments, custom configuration directory, version selection and configuration-only mode.
 
-| Location, relative to the OpenCode configuration directory | Responsibility |
+Validation covers shell syntax and 17 isolated installer/helper tests, including updates, backups, command retirement, repository identity, shared documentation and legacy adoption. Remote installation was simulated; no model calls or live model-behavior tests were performed. Configuration and prompts define the intended behavior, not a guarantee that a model always follows it.
+
+## Command selection
+
+No manual agent selection is needed to start a command: its definition selects the primary agent. Use commands inside the repository you intend to work on.
+
+| Command | Purpose | Agents/models | Persistent output |
+| --- | --- | --- | --- |
+| `/sp-plan <feature/change description>` | Clarify and design a larger change | designer high; focused explore low if useful | Task design, plan, scenarios and progress |
+| `/sp-impl <task-directory>` | Implement an approved plan and update domain documentation | orchestrator high; coder low/high; reviewer high; documenter low | Implementation, task records and updated shared documentation |
+| `/sp-tests <task-directory>` | Generate/adapt and execute local tests | orchestrator high; tester low/high; reviewer high | Tests and scenario/results records |
+| `/sp-docs <feature/task-directory or process description>` | Document an existing process or refresh its description | orchestrator high; documenter low; reviewer high | Shared domain documentation and a short documentation task record |
+| `/sp-followup <feature/task-directory or feature name> <change>` | Make a simple change with recovered feature context | followup low only | Change, short task record and updated shared documentation |
+| `/sp-simplified <small action>` | Perform a small direct action such as a typo fix | simplified low only | Requested edit; result in chat, no workflow artifacts |
+
+`/sdd` has been renamed to `/sp-impl`. The installer backs up and removes its recognized old managed command file. It stops if that file appears to be an unrelated custom command, allowing you to resolve the name conflict without losing it.
+
+## Activation and common rules
+
+Superpowers is inactive by default. These six commands activate only their requested scope and explicitly authorized delegates. Mentioning a skill, opening documentation or selecting an agent alone does not activate the process. Ordinary `build` uses low and does not create workflow documents or tests unless explicitly requested.
+
+The full flow does not advance from planning to implementation or from implementation to testing automatically. There are two intentional built-in completion steps: `/sp-impl` always updates shared domain documentation, and `/sp-followup` always updates that same documentation. Neither step requires an additional `/sp-docs` invocation.
+
+All agent communication, task artifacts and documentation are in English. Existing application language and code conventions are preserved.
+
+Work happens in the current branch and working directory, even on main/master or with staged, unstaged or untracked changes. No automatic branches, worktrees, stashes, resets, staging, commits, pushes, merges or publication. Preserve existing user edits. Ask only about actual uncertainty or conflicts that prevent the requested change.
+
+The standard Superpowers plugin still injects bootstrap context. Command-only activation is enforced through user instructions and agent permissions, not by unloading the plugin. Project or managed configuration can override global settings. After updates, inspect actual agent/model metadata on a small task.
+
+## Feature and task structure
+
+A **feature** is a long-lived domain capability or process, such as notifications. A **task** is one change to that feature, such as introducing retries or adding manual resumption.
+
+The default artifact root is `~/.config/opencode/superpowers`. A custom OpenCode configuration directory changes that root accordingly.
+
+| Relative location under the artifact root | Purpose |
 | --- | --- |
-| `opencode.jsonc` or the selected existing configuration | Plugin, model assignments, agent definitions and permissions |
-| `AGENTS.md` | General working agreements and command-only activation |
-| `commands/sp-plan.md` | Planning phase contract |
-| `commands/sdd.md` | Implementation phase contract |
-| `commands/sp-tests.md` | Testing phase contract |
-| `commands/sp-docs.md` | Domain documentation phase contract |
-| `superpowers/<project-id>/<task-id>/` | Persistent task artifacts |
+| `<project-id>/features/<feature-id>/feature.json` | Repository identity and feature name |
+| `<project-id>/features/<feature-id>/documentation.md` | The ONE current domain description for the entire feature |
+| `<project-id>/features/<feature-id>/tasks/<task-id>/identity.json` | Individual task identity and link to a selected prior task, when applicable |
+| `<project-id>/features/<feature-id>/tasks/<task-id>/design.md` | Approved design, for planned work |
+| `<project-id>/features/<feature-id>/tasks/<task-id>/plan.md` | Production implementation stages, for planned work |
+| `<project-id>/features/<feature-id>/tasks/<task-id>/test-scenarios.md` | Separate behavioral test scenarios, for planned work |
+| `<project-id>/features/<feature-id>/tasks/<task-id>/progress.md` | Request, actual progress, decisions, verification and deferred issues |
+| `<project-id>/features/<feature-id>/tasks/<task-id>/support/` | Relevant baseline evidence and, where applicable, review reports |
 
-The default configuration directory in this guide is `~/.config/opencode`. Use the actual configured directory if it differs. Custom commands are OpenCode prompt templates; `$ARGUMENTS` supplies the text after the command, and the command can select its agent. [OpenCode custom commands](https://opencode.ai/docs/commands/)
+The project ID combines the repository name and a hash of its canonical path. Task IDs are unique. These identifiers never create or select Git branches.
 
-The standard plugin install entry is `superpowers@git+https://github.com/obra/superpowers.git`. Restart OpenCode after setup. Recheck activation and routing after significant updates; a plugin update can change its workflow instructions. [Superpowers OpenCode installation](https://github.com/obra/superpowers/blob/main/docs/README.opencode.md)
+Every change to a feature uses the same `documentation.md`. Do not create task-local current documentation or a separate document containing only the latest delta. Preserve unaffected domain rules and useful user-authored content while updating changed behavior. Historical task records remain intact.
 
-## 5. Agents and cost control
+Follow-up tasks have a brief progress record and scoped baseline evidence, without formal plans, scenarios or reviews. Documentation tasks do not fabricate a design, implementation plan or test scenarios. `/sp-simplified` creates none of these directories or files.
 
-The following role names define the intended agent configuration. Test workers are separate from implementation workers so their editing and execution rules can differ.
+The documents live outside Git. They are retained and not automatically committed, shared or deleted. Protect them with your own backup approach if needed.
 
-| Agent | Model | Responsibility |
-| --- | --- | --- |
-| `build` | low | Ordinary work outside the workflow |
-| `designer` | high | Requirements, design, implementation plan and test scenarios |
-| `orchestrator` | high | Coordinate the active implementation, testing or documentation phase |
-| `coder` | low | Bounded production implementation and fixes; no test work |
-| `coder-strong` | high | Complex or escalated production work; no test work |
-| `tester` | low | Test implementation, existing-test adaptation and execution |
-| `tester-strong` | high | Difficult or escalated test work |
-| `documenter` | low | Write domain documentation for future coding agents |
-| `reviewer` | high | Independent stage and final review, scoped to the active phase |
-| `explore` | low | Focused read-only repository investigation |
+## Recovering the correct context
 
-The high orchestrator delegates routine code changes rather than implementing everything itself. It provides each worker with the exact task, relevant decisions, repository path, applicable project rules and report location. Workers do not need the entire conversation history.
+An explicit feature or task directory identifies the target most reliably. A task directory also identifies its parent feature. The command reads the shared domain description, relevant previous task decisions and current source. It does not assume a saved plan was implemented or that the code still matches an older report.
 
-Use low first for well-specified work. A task identified in the plan as requiring difficult reasoning, subtle concurrency or complex integration may start on high. Otherwise, after two unsuccessful attempts at the same problem, escalate automatically and briefly announce why. First distinguish missing information from insufficient capability: supply missing context or split an oversized task instead of blindly retrying.
+For a feature name or process description, the agent lists features belonging to the current repository. It selects a unique match and asks when the target is ambiguous. It checks existing features before creating another folder. Repeated modifications of the same process should reuse its feature identity, not create near-duplicate features.
 
-Workers do not spawn additional workers. Implementation is sequential within the shared working directory. Independent reviews are coordinated centrally to avoid duplicate reviews and conflicting edits.
+The installed `personal-flow/task-files.py` helper returns JSON with `repository`, `feature_directory`, `task_directory` and `documentation`. A feature-only resolution has a null task directory. Agents must use the explicit returned paths, especially the shared documentation path.
 
-Model assignment belongs in OpenCode configuration. The orchestrator chooses an agent; that agent's configured model determines execution. Prompt-based routing is not deterministic. Inspect actual agent/model metadata on an initial small task instead of relying on an agent's statement about its own model.
-
-## 6. Task documents and identity
-
-Each task has a persistent directory outside the repository:
+Helper operations, normally run by agents:
 
 ```text
-~/.config/opencode/superpowers/<project-id>/<task-id>/
+list <repository> [feature-name]
+init <repository> <feature-name> [SP-PLAN|SP-DOCS]
+task <repository> <feature-or-task-path> <task-slug> <SP-PLAN|SP-DOCS|SP-FOLLOWUP>
+resolve <repository> <feature-or-task-path>
+adopt <repository> <legacy-task-path> <feature-name>
 ```
 
-The installer/commands must define a stable project ID that distinguishes repositories with the same name. A readable repository name plus a short hash of its canonical local path is one suitable implementation. A task ID should be readable and unique, for example a date plus a feature name. These IDs are storage identifiers, not branch names.
+Pass each argument separately and quote paths or names containing spaces. `init` creates or finds the feature and creates a task. `task` creates a new task under the resolved feature and records a link when an earlier task was supplied. Commands resume an explicitly identified unfinished task instead of creating another one unnecessarily.
 
-| File | Required content |
-| --- | --- |
-| `design.md` | Goal, scope, exclusions, decisions, constraints, acceptance criteria and approval record |
-| `plan.md` | Spec reference, coherent stages, concrete files/interfaces, task dependencies, high/low suitability and compilation approach |
-| `test-scenarios.md` | Individually identified scenarios, expected behavior, priorities and suggested test levels |
-| `progress.md` | Repository identity, observed branch, active phase, completed work, decisions, review findings, verification and deferred test issues |
-| `documentation.md` | Domain concepts, business rules, processes, state transitions, examples, decisions and limitations; created by `/sp-docs` |
+## Full flow: planning
 
-Supporting briefs, review reports and baseline records may live in a `support/` subdirectory of the same task directory. Do not place workflow documentation or scratch reports inside the repository. Source code and test files still belong in the repository's established locations.
-
-`/sp-docs` reuses the selected task directory. A standalone documentation request creates a task directory using the same repository identity rules, with identity/progress records and `documentation.md`; it does not require or fabricate design, plan or test-scenario files. Existing documentation is updated in place for the same scope, preserving useful user-authored content.
-
-Documents are retained after completion. They are not automatically committed, shared or deleted. Because they live outside Git, repository history does not back them up.
-
-## 7. `/sp-plan`: design and plan
+Start with a task description:
 
 ```text
-/sp-plan Add scheduled notification processing with duplicate prevention
+/sp-plan Add scheduled notifications with duplicate prevention.
 ```
 
-The high designer reads relevant project instructions, implementation and existing tests before asking questions. Reading tests is allowed; running or changing them is not part of this phase.
+The high designer reads project instructions, relevant implementation, available shared domain documentation and existing tests. It does not run tests. It asks about material uncertainty, presents the design and obtains approval. Already approved decisions do not need repeated approval without new evidence.
 
-The designer clarifies material uncertainty that cannot be resolved from the repository, proposes a design and waits for approval. Approved decisions should not be repeatedly reopened without new evidence. The written design is reviewed with the user before the final implementation plan is prepared.
+For an existing feature, create a new planned task under that feature. For a new feature, establish its folder first. The designer writes the design, implementation plan and separate test-scenario document in the task subfolder. Planning does not change the current domain document to describe behavior that has not been implemented.
 
-The plan defines concrete files, interfaces, behavioral requirements, dependencies and coherent implementation stages. It must be sufficiently explicit for a cheaper worker without turning every trivial edit into a separate delegation and review. It separates production tasks from deferred test work and identifies work requiring high reasoning.
+The plan contains scope, exclusions, exact implementation files/interfaces, dependencies, behavioral requirements, coherent stages, acceptance criteria and a compilation-only approach. It gives low enough context to execute and flags work that merits high. It does not mix test implementation into production stages.
 
-The designer also inspects how this project already tests similar behavior: fake objects, mock dependencies, in-memory adapters and available local harnesses. It creates test scenarios in a separate file, not test source code.
+Each scenario contains a stable ID, linked requirement, preconditions/data, action, expected result, priority, suggested test level and existing fake/mock/harness to reuse. Cover relevant normal, boundary, failure, retry and regression behavior. These are scenarios, not test source code.
 
-### Scenario format
+Planning ends with the actual task path and an exact `/sp-impl` invocation. The user starts implementation explicitly.
 
-Each scenario includes:
-
-- Stable ID and linked requirement.
-- Preconditions and test data.
-- Action.
-- Concrete expected outcome.
-- Priority.
-- Suggested level: unit, local integration or E2E.
-- Existing fake/mock/harness to reuse and any coverage limitation.
-
-Example:
-
-| Field | Example |
-| --- | --- |
-| ID | TS-003 |
-| Requirement | Processing a completed item must not send another notification |
-| Preconditions | In-memory repository contains a completed item; fake sender records calls |
-| Action | Invoke processing for that item again |
-| Expected outcome | No sender call; completion state remains unchanged |
-| Priority / level | High / unit or local component integration |
-
-Scenarios cover normal behavior, relevant boundaries, failure paths and regressions. Concurrent or retry behavior is included where the feature requires it. They are a behavioral specification, not a promise of full real-service integration coverage.
-
-The phase finishes with the artifact paths, a short summary and the exact `/sdd` invocation. No implementation, branch changes, worktrees or commits occur.
-
-## 8. `/sdd`: production implementation
+## Full flow: implementation and automatic documentation
 
 ```text
-/sdd ~/.config/opencode/superpowers/<project-id>/<task-id>
+/sp-impl <task-directory>
 ```
 
-Invoking `/sdd` authorizes implementation of the selected plan. It does not authorize tests or commits. The orchestrator reads the design, plan and progress, checks repository identity and records the starting state.
+This authorizes the selected production plan and its required domain documentation update. High orchestrates; low performs well-scoped implementation. Complex tasks may go directly to `coder-strong` on high. After two unsuccessful attempts at the same problem, address missing context or oversized scope, then escalate with the findings rather than repeating an identical attempt.
 
-Existing modifications do not block work. Before editing affected files, the workflow preserves enough baseline information to distinguish pre-existing changes from new ones. A plain diff against `HEAD` is not sufficient when the repository was already dirty. Baseline capture must not stash, reset, stage or discard user changes, and must not collect unrelated secret files.
+Workers do not spawn workers. Implementation is sequential in the shared directory. High reviews after coherent stages and at the end, checking specification compliance, correctness and regression risks. Confirmed in-scope defects are fixed automatically; optional style suggestions or unrelated refactors are reported. Material behavior/API/data-model changes or new dependencies require agreement.
 
-The orchestrator dispatches production tasks, runs independent review after coherent stages and arranges corrections. Ordinary implementation decisions within the approved design are made autonomously and recorded.
+Capture scoped baseline evidence before editing so pre-existing user changes remain distinguishable from the task's changes. A diff against HEAD alone is insufficient in a dirty repository. Avoid unrelated files or secrets.
 
-### Allowed verification
+Never create, modify or run tests, fixtures or test helpers in this phase, including during review. Record suspected existing-test breakage for `/sp-tests` and leave those files unchanged. Missing new tests does not block implementation review.
 
-Compilation only, using the project's established command with test execution disabled. Do not run tests, lint or a separate typecheck. If the normal build bundles those operations, inspect its scripts and use a compilation-only route when available. Do not blindly assume that a command called `build` has no additional effects.
+Compilation is allowed only through an isolated route that does not run tests or lint. No separate typecheck. Compilation's inherent type checking is acceptable. Inspect build lifecycles; a command called `build` may execute excluded checks. If isolation is unavailable, report compilation as not run instead of changing scripts to bypass checks.
 
-Compilation may inherently perform type checks; this is acceptable. It does not authorize a separate typechecking pass. If compilation cannot be isolated, record it as not run instead of silently widening verification.
+After implementation and code review, the orchestrator automatically delegates the shared domain document to low `documenter`, then high `reviewer` checks domain accuracy. This is part of `/sp-impl`, not an optional next command. Do not ask the user to start `/sp-docs` or run tests first.
 
-### Strict test boundary
+The document describes the full current feature, incorporating the latest change and preserving unaffected rules. If work is interrupted or blocked, record the actual state and do not present intended or partial behavior as completed. A failed documentation update means the full implementation flow is not complete.
 
-During `/sdd`, neither workers nor reviewers:
+The final report states what changed, review findings, compilation evidence, deferred test issues and the canonical documentation path. It explicitly says that tests were not created, changed or run. `/sp-tests` remains a separate user invocation.
 
-- Create new tests.
-- Modify existing tests, fixtures or shared test helpers.
-- Execute existing or new tests.
-- Add test tooling or change test expectations to make checks pass.
-
-If a changed interface is likely to break an existing test, record the affected test and reason in `progress.md` for `/sp-tests`. Do not repair it during implementation. Such observations must be labeled as inspection-based unless actual evidence exists; no tests were run.
-
-### Reviews and escalation
-
-Review checks specification compliance, correctness, regression risks and the actual scope of changed code. Missing new tests does not block this phase. Suspected bugs can still be reported from inspection; deferred testing is not a reason to ignore them.
-
-Confirmed defects and deviations within the approved design are corrected automatically. Stylistic suggestions, optional refactors and scope expansions are reported without automatic implementation. Ask before material changes to behavior, public API, data model or dependencies.
-
-### Completion report
-
-Report implementation status, changed areas, stage/final review findings, compilation command and result, and deferred test issues. Explicitly state that tests were not created, modified or run. “Implementation complete” does not mean “fully tested” or “ready to merge.”
-
-Do not automatically start `/sp-tests`.
-
-## 9. `/sp-tests`: test generation and execution
+## Full flow: tests
 
 ```text
-/sp-tests ~/.config/opencode/superpowers/<project-id>/<task-id>
+/sp-tests <task-directory>
 ```
 
-The high orchestrator reads the design, test scenarios, deferred issues and current implementation. It checks existing coverage before generating tests so it does not duplicate equivalent checks.
+High coordinates low test workers and independent high review. Read the design, scenarios, current behavior and deferred test issues. Reuse equivalent existing coverage rather than generating duplicates. Use high for difficult test reasoning or after two unsuccessful attempts at the same problem.
 
-Low test workers write missing tests and adapt existing tests to approved behavior. High reviews assertion quality, scenario alignment and the realism of fakes. Use the same two-attempt escalation policy as implementation.
+Use established frameworks and local fake/mock/in-memory patterns. No Docker, containers, real external services or shared test environments. Default to unit and local integration/component tests. E2E requires an explicit request and still must meet those environment restrictions. New frameworks, tools or dependencies require agreement.
 
-### Environment and tooling
+Run generated/adapted tests first, then related module tests only when their setup is compatible with these restrictions. Full application suites require explicit instruction. Inspect runner setup before execution; do not accidentally launch container-backed tests.
 
-Use the project's existing test framework and established fake/mock/in-memory patterns. Tests must not require Docker, containers, a shared environment or a real external service. Do not install or launch such dependencies to make a test pass.
+Fix genuine test bugs. A valid assertion exposing a production defect remains meaningful and failing: report it rather than editing production code, weakening expectations or manipulating fakes. A fake cannot prove real database or broker semantics; report relevant coverage limitations.
 
-Default coverage is unit tests and local integration/component tests where appropriate. E2E is only included when explicitly requested and must still satisfy the local environment constraint. Any new framework, tool or dependency requires agreement.
+The final report maps scenario IDs to files/results and lists actual commands, failures and gaps. To fix production behavior, explicitly request `/sp-impl` for approved planned work or `/sp-followup` for a bounded correction. Each such implementation updates the shared domain document. Tests remain separately requested.
 
-If a requirement genuinely depends on real database, broker or service semantics, a fake cannot prove that behavior. Test the local contract where useful, document the limitation and leave the real-service scenario unverified. Do not weaken the requirement or silently claim equivalent coverage.
-
-### Execution order
-
-1. Run newly written and adapted tests.
-2. Run related existing module tests that satisfy the environment restrictions.
-3. Run the full application's suite only on explicit request, still respecting those restrictions.
-
-Inspect the selected runner configuration before running a suite: module tests can include container-backed tests. If safe selection is unavailable, skip the suite and report why.
-
-### Failures
-
-Fix errors in the tests themselves and rerun the affected tests. If a valid test exposes a production defect, retain the meaningful assertion and report the defect. Do not change production code, manipulate fakes to hide the problem, skip the assertion or mark the scenario passed.
-
-A production fix needs separate authorization. For a fix within the same approved scope, a subsequent `/sdd` invocation can address the recorded defect. A material design change requires revisiting the plan first. After implementation, invoke `/sp-tests` again to verify it.
-
-The final report maps scenario IDs to test files/results and distinguishes passed, failed, existing coverage and unverified scenarios. It lists commands executed, production defects and remaining coverage gaps. No commits occur automatically.
-
-## 10. `/sp-docs`: domain documentation for future coding agents
-
-After implementation and testing, invoke:
+## Short flow: follow-up
 
 ```text
-/sp-docs ~/.config/opencode/superpowers/<project-id>/<task-id>
+/sp-followup <feature-or-task-directory> Allow manual resumption after three failed attempts.
 ```
 
-Or document an existing feature independently:
+A feature name is also accepted if it identifies the process unambiguously:
 
 ```text
-/sp-docs Describe the domain rules for scheduled notifications and duplicate prevention.
+/sp-followup Notifications — allow manual resumption after three failed attempts.
 ```
 
-The command accepts an explicit task directory or a feature/scope description. Resolve a supplied directory against the current repository. For a scope description, reuse a clearly identified matching task in the conversation; otherwise create a standalone task directory. If the intended scope or task is ambiguous, clarify that ambiguity rather than choosing an arbitrary previous task.
+This is a direct change flow, not another planning phase. The low `followup` agent recovers feature context, reads current implementation and creates a small linked task record. It makes the requested production change itself and then updates the one shared domain document itself.
 
-The high orchestrator delegates writing to `documenter` on low. The high `reviewer` independently checks the resulting document against the actual behavior found in the implementation. Findings return to the documenter for correction. After two unsuccessful attempts to resolve the same documentation issue, high handles that bounded issue. The orchestrator does not routinely rewrite the entire document itself.
+There are no subagents, reviewers, formal design/plan documents, test scenarios or test work. The agent uses relevant Superpowers reasoning proportionally. A clear small request does not require repeating the full design approval process. Clarify actual ambiguity before changing behavior.
 
-Agents inspect current implementation and relevant existing task documents as evidence. A plan describes intent; it is not proof of implemented behavior. Review evidence may remain in the task's supporting reports, while the final document stays focused on domain meaning.
+Compilation is permitted when useful and isolated; no tests, fixture changes, lint or separate typecheck. Preserve the dirty-worktree baseline. Record suspected existing-test breakage briefly for later testing. Documentation uses the same domain format as `/sp-docs`, but without its delegation or review steps.
 
-The command does not run builds, tests, lint or typechecking. It does not inspect test execution status, ask whether tests were run, require successful outcomes or add test-readiness warnings. Timing belongs to the user. All repository files remain unchanged; output is written to the selected external task directory.
+The response contains the change, compilation evidence if any, deferred issues and shared documentation path. If the scope becomes too broad to handle reliably, the agent asks about narrowing it or using `/sp-plan`; it does not automatically change model, start reviewers or switch flows.
 
-### Audience and format
+## Small actions: simplified
 
-The primary reader is a future coding agent that needs to understand the domain before changing behavior. Use concise English Markdown, stable headings, consistent terminology and explicit rules. Small tables suit definitions, decision rules and state transitions. A domain-level Mermaid diagram is useful only when it clarifies a nontrivial process.
+```text
+/sp-simplified Fix the typo in the notification button label.
+```
 
-The document must remain useful after a structural refactor or class rename. Do not include source links, repository file paths, line numbers, class or method names, source navigation tables or descriptions that mirror the implementation structure. Name domain concepts according to their business meaning, even when a current implementation happens to use the same word.
+The low `simplified` agent handles the request alone. It uses applicable Superpowers reasoning without forcing the full process: brief brainstorming for unclear behavior, systematic debugging for a defect, and direct action for an obvious typo.
 
-Keep technical details only when they express an externally meaningful contract or constraint, such as a time zone, processing deadline or duplicate-prevention guarantee. Explain those details in domain terms. Do not enumerate internal configuration keys, libraries or infrastructure choices simply because they exist in the code.
+No subagents, reviewers, automatic escalation, tests or fixture changes. No generated documentation, plans, designs, scenarios, task folders, progress files or persistent reports. Reasoning and the result remain in chat. The requested edit is the only intended persisted output. Compilation is optional when useful and safely isolated; no lint or separate typecheck.
 
-### Document structure
+The current-branch and existing-change rules still apply. If the request needs an update to domain documentation, the agent recommends `/sp-followup` or `/sp-impl` and asks before switching. `/sp-simplified` deliberately does not update the shared document.
 
-Begin with a domain-specific title, a short scope statement and a last-updated date. Include the following sections when relevant; omit empty sections and boilerplate:
+## Documentation on demand
+
+```text
+/sp-docs <feature-or-task-directory>
+```
+
+Or describe a pre-existing process, even if no agent ever implemented it:
+
+```text
+/sp-docs Document the existing invoice approval process and its business rules.
+```
+
+Resolve an existing feature or establish a new one, create a documentation task record and inspect actual implementation. No prior plan or implementation task is required. Low writes the shared document, high independently checks it and corrections are made as needed. After two unsuccessful revisions of the same issue, high resolves that bounded issue.
+
+This command does not change repository files or run builds, tests, lint or typechecking. It does not check test execution status, ask whether tests were run, require successful test outcomes or add test-readiness warnings. The user chooses when to invoke it.
+
+It is useful for first documenting an existing process or refreshing documentation after changes made outside these flows. Normal `/sp-impl` and `/sp-followup` already maintain the document automatically.
+
+## Domain document format
+
+The primary reader is a future coding agent learning the domain before modifying behavior. Use concise English Markdown, stable headings, consistent terminology, explicit rules and small tables where helpful.
+
+The document must remain useful after a structural refactor or class rename. Do not include code references, source links, repository paths, line numbers, class/method names or source-navigation tables. Define concepts by their business meaning. Keep technical details only when they express meaningful domain constraints, such as time zones, deadlines or duplicate-prevention guarantees.
+
+Start with a domain-specific title, scope and last-updated date. Include relevant sections and omit empty boilerplate:
 
 | Section | Content |
 | --- | --- |
-| Purpose and scope | The problem being solved, participants and boundaries |
-| Domain concepts | Terms, precise meanings and relationships |
-| Business rules and invariants | Conditions, required behavior and what must always remain true |
-| Processes and state transitions | Triggers, preconditions, actions, outcomes and allowed transitions |
-| Edge cases and failures | Expected behavior for relevant exceptional situations |
-| Decisions and constraints | Known rationale, tradeoffs and limits affecting domain behavior |
-| Example scenarios | Concrete situations demonstrating the rules and their consequences |
-| Open questions | Material unresolved domain behavior or rationale, if any |
+| Purpose and scope | Problem, participants and boundaries |
+| Domain concepts | Terms, definitions and relationships |
+| Business rules and invariants | Conditions and required behavior |
+| Processes and state transitions | Triggers, preconditions, actions and outcomes |
+| Edge cases and failures | Expected exceptional behavior |
+| Decisions and constraints | Known rationale, tradeoffs and domain limits |
+| Example scenarios | Concrete situations demonstrating the rules |
+| Open questions | Material unresolved domain behavior or rationale |
 
-Use stable rule identifiers when helpful for cross-referencing scenarios; preserve existing identifiers during updates. Distinguish confirmed behavior, recorded rationale and unresolved questions. Never invent business intent from implementation details or silently turn an observed defect into an approved business rule. Resolve contradictions from available evidence or state the precise uncertainty.
+Use stable rule IDs when helpful and preserve them during updates. Distinguish confirmed behavior, recorded rationale and uncertainty. A plan is not evidence of implementation. Never invent business intent or silently turn a suspected defect into an approved rule. Keep precise unresolved questions when evidence conflicts.
 
-Examples describe domain inputs and outcomes, without requiring executable code. For instance, a duplicate-prevention rule should say what counts as the same notification and when another delivery is permitted, rather than naming a service, repository or method. Avoid claims about exactly-once delivery unless the implementation supports that guarantee.
+Examples describe domain inputs and outcomes, not executable code. A compact domain-level diagram is appropriate when it clarifies a nontrivial process. Avoid transcripts, large code blocks, secrets or personal data.
 
-Documentation should describe current behavior, not narrate the development session or duplicate the implementation plan. Keep it proportional to the feature. Do not include secrets, tokens or personal data.
+Review evidence and technical locators may remain in task support records; the shared document stays domain-focused. A pure structural refactor should not require rewriting it. Changes to domain behavior or constraints do.
 
-### Storage, review and later use
+For a later coding session, explicitly provide the shared document path as reference context. Reading it does not activate the workflow. The next agent uses it to understand the domain and inspects current code for the specific requested change.
 
-Write `documentation.md` beside the selected task's existing plan and scenarios. Add its location and a one-line domain scope summary to `progress.md`, then return the actual document path to the user. Do not automatically start another phase or commit anything.
+## Agents and permissions
 
-High review checks domain accuracy, completeness of important rules, consistent terminology, useful brevity and absence of implementation-specific references. Correct unsupported claims and contradictions before completion. No test-status gate is part of this review.
+| Agent | Model | Role |
+| --- | --- | --- |
+| build | low | Ordinary work |
+| designer | high | Full planning |
+| orchestrator | high | Full implementation, testing and documentation coordination |
+| coder / coder-strong | low / high | Production implementation, no tests |
+| tester / tester-strong | low / high | Local test work, no production edits |
+| reviewer | high | Independent review in full flows only |
+| documenter | low | Shared domain document, repository read-only and shell denied |
+| followup | low | One-agent change plus shared documentation |
+| simplified | low | One-agent small action, no workflow artifacts |
+| explore | low | Focused read-only investigation in delegated full flows |
 
-In a later coding session, explicitly provide the document path as reference context. Reading it does not activate this workflow. The next agent uses it to understand the domain, then inspects the current implementation for the requested change. A structural refactor alone should not require a documentation rewrite; changes to domain behavior or constraints do.
+`followup` and `simplified` deny delegation. Simplified also denies edits to the workflow artifact root. Production agents deny common test paths. Document-only agents allow edits only under the artifact root. Shell permissions begin with selected read-only Git commands allowed and other commands requiring scoped permission. Once a specific safe compilation/test command is allowed, do not request repeated permission unnecessarily.
 
-## 11. Git, permissions and approval boundaries
+Patterns cannot identify every project's test layout and shell operations can also modify files. Explicit phase instructions remain necessary; permissions are not a complete sandbox. Honor actual tool denials and project policies. Ask for new dependencies, unrelated outside access, destructive operations or shared external effects. No command implicitly authorizes Git publication or commits.
 
-Work always happens on the current branch and in the current working directory. There are no automatically created branches or worktrees, including when the current branch is a default branch. Existing changes are preserved; ask only when an edit cannot safely coexist with them or ownership of a change is unclear.
+## Upgrading and legacy tasks
 
-Commits, staging for a commit, pushes, merges and PR creation require explicit instruction. No phase command implicitly authorizes them.
+Rerun the installer with the intended high/low model IDs. It updates managed agents, commands, helper and rules while retaining unrelated configuration and task artifacts. Originals are saved under `.personal-flow-backups/<snapshot>/` in the configuration directory. A manifest records original paths, existence and modes. Restore exact files from a chosen backup if needed; do not copy the manifest over configuration.
 
-| Operation | Intended policy |
+The recognized old `commands/sdd.md` is removed within the backup/rollback transaction, and `commands/sp-impl.md` is installed. An unrelated custom `sdd.md` is left intact and reported as a conflict. Old historical references to `/sdd` are historical; use `/sp-impl` for new work.
+
+Old flat directories `<project-id>/<task-id>/` remain untouched. On first use, assign a legacy task to the correct feature through the helper's `adopt` operation. The command should ask only if the feature grouping is ambiguous.
+
+Adoption copies the selected task into the feature's task history and records its origin. The original remains recoverable. A previous task document seeds the shared documentation only if none exists; otherwise the existing shared document is preserved, and the old text becomes historical supporting material. Reconcile relevant domain facts against current implementation. Never automatically group unrelated tasks or overwrite a newer shared description with an older one.
+
+Repeated adoption of the same legacy task into the same feature reuses the imported task. Historical original/snapshot documents are not additional current domain documents; only the feature-level `documentation.md` is maintained.
+
+## Resuming and troubleshooting
+
+Resume an explicitly identified task with the corresponding command. Reconcile progress with actual code and shared documentation; do not trust stale checkboxes or rerun completed work blindly. A repository mismatch must be resolved before editing. Never switch branches automatically to match an old record.
+
+Canceling work does not roll back completed edits or authorize deleting documents. Avoid concurrent sessions modifying the same feature, code or shared documentation.
+
+| Symptom | Check |
 | --- | --- |
-| Read relevant project files and rules | No routine approval prompt |
-| Edit production code during `/sdd` | Allowed within task scope |
-| Edit tests during `/sp-tests` | Allowed within task scope |
-| Write planning/progress/review/domain documents | Allowed within this task's external artifact directory |
-| Read repository files during `/sp-docs` | Allowed; repository editing and build/test execution are outside this phase |
-| Run agreed compilation/test commands in the appropriate phase | No repeated prompts once permitted |
-| Install dependencies or tools | Ask |
-| Access unrelated paths outside the repository | Ask |
-| Destructive operations or shared external side effects | Ask; never inferred from a phase command |
+| New commands are missing | Updated installer, actual configuration directory and a restarted OpenCode session |
+| Every worker uses high | Configured agent IDs and actual dispatch metadata |
+| Ordinary requests activate the flow | Global activation rule, project overrides and plugin instructions |
+| Implementation runs tests | Phase instructions and build lifecycle; tests are excluded |
+| Follow-up creates reviewers | It must select primary `followup`, whose delegation is denied |
+| Simplified creates task artifacts | It must select primary `simplified`; no helper calls or artifact writes |
+| Multiple current docs appear | Use the helper's canonical feature documentation path, never task-local copies |
+| Docs demand a plan or test results | Standalone SP-DOCS contract has no such prerequisites |
+| A legacy task cannot resolve | Adopt it into an explicitly selected feature first |
 
-The external task directory is an explicit exception to the general outside-project approval rule. Agents need access to that directory for normal operation, not unrestricted access to the home directory.
+After installing, try a small representative task to confirm the configured model assignments and actual behavior. This is a setup check, not an instruction to generate project test infrastructure.
 
-File permissions must reflect role boundaries: designer, documenter and reviewer write only external task artifacts, production workers edit production files, and test workers edit tests. Test file locations vary by project, so final enforcement needs repository-aware patterns. Shell commands can modify files too; `edit: deny` alone is not a complete read-only guarantee.
+## Configuration ownership and references
 
-If repository rules conflict with these preferences, report the concrete conflict. Do not silently bypass a protected project policy or claim that a check was completed when it was excluded by this workflow.
+`AGENTS.md` contains general working agreements and activation. `personal-flow/WORKFLOW.md` contains the phase contracts and domain format. Command files select primary agents; configuration assigns models and permissions. `personal-flow/task-files.py` maintains repository/feature/task identity and explicit paths. Project-specific implementation and build conventions remain in project instructions.
 
-## 12. Resuming and changing work
+Keep future changes consistent across these locations. Do not restore automatic worktrees/commits, test work during implementation, or task-local current domain documents.
 
-Resume by invoking the same phase command with the same task directory. The agent reads `progress.md` and checks actual files before deciding what is complete. It must not trust stale checkboxes alone or automatically redo completed work.
+Platform references retained for installation context:
 
-New sessions work because task documents contain repository identity, decisions and progress. A missing argument is acceptable only if the task is unambiguous in the visible conversation; otherwise the agent asks. Use the full task path for predictable behavior.
+- [OpenCode commands](https://opencode.ai/docs/commands/)
+- [Superpowers for OpenCode](https://github.com/obra/superpowers/blob/main/docs/README.opencode.md)
+- [Superpowers user instruction precedence](https://github.com/obra/superpowers/blob/main/skills/using-superpowers/SKILL.md#user-instructions)
 
-If the repository path differs from the recorded identity, resolve that mismatch first. If the branch or code changed manually, inspect the current state, report material drift and continue on the current branch once scope is clear. Never switch back automatically.
-
-If you interrupt a running phase, no rollback is implied. Completed and partial edits remain. Canceling a phase does not authorize deleting its documents or reverting changes.
-
-Avoid concurrent implementation/testing sessions on the same files. Sequential delegation within one orchestrator does not prevent a second independently started session from creating conflicts.
-
-## 13. Example working day
-
-In the repository's OpenCode session:
-
-```text
-/sp-plan Add duplicate prevention to scheduled notification processing.
-Reuse the existing persistence and sender abstractions.
-```
-
-After discussing the design:
-
-```text
-I approve the design. Prepare the implementation plan and test scenarios.
-```
-
-Read the resulting documents. Copy the exact path provided by the agent:
-
-```text
-/sdd ~/.config/opencode/superpowers/notifications-a1b2c3/2026-09-08-deduplication
-```
-
-The directory above is illustrative; your project ID will differ. Implementation and review proceed, followed by compilation only. The final report might say:
-
-```text
-Implementation complete. Compilation passed.
-Tests were not created, modified or run.
-Deferred: the existing sender test still uses the previous method signature.
-```
-
-Later:
-
-```text
-/sp-tests ~/.config/opencode/superpowers/notifications-a1b2c3/2026-09-08-deduplication
-```
-
-The test phase adapts that test, adds missing scenario coverage, runs allowed local tests and reports results. If tests reveal a production defect, review that finding before requesting a fix. When satisfied, explicitly request a commit and specify whether existing unrelated changes should be excluded.
-
-To document the domain behavior for a future coding session:
-
-```text
-/sp-docs ~/.config/opencode/superpowers/notifications-a1b2c3/2026-09-08-deduplication
-```
-
-Low writes `documentation.md` in that same directory and high reviews it. The document explains notification eligibility, duplicate identity, completion rules and relevant failure scenarios using domain terms. It contains no code references. This phase does not rerun tests or ask for evidence of their execution.
-
-Later, provide that document as context:
-
-```text
-Read the domain documentation at <actual-task-directory>/documentation.md.
-Use it as context when assessing the requested change to notification eligibility.
-```
-
-## 14. Troubleshooting and initial acceptance check
-
-| Symptom | What to inspect |
-| --- | --- |
-| Commands are not listed | Correct configuration directory, command filenames/frontmatter, then restart OpenCode |
-| Ordinary requests start brainstorming | Global activation rule, conflicting project instructions and plugin updates |
-| `/sdd` writes or runs tests | Active phase instructions for orchestrator, workers and reviewer; inherited TDD instructions |
-| Test stage launches Docker | Runner selection and existing fixture setup; container-backed suites must be excluded |
-| All workers use high | Actual configured agent model IDs and which agent was dispatched |
-| Reviewer cannot save a report | Permission for the external task directory, not just repository-local `.superpowers/` |
-| Agent requests a clean Git tree | Personal current-branch policy must override stock worktree setup instructions |
-| Review includes pre-existing changes | Starting baseline and task attribution; do not rely on `git diff HEAD` alone |
-| Compilation unexpectedly starts tests/lint | Build lifecycle and package scripts; select an isolated compilation route |
-| New session repeats completed tasks | Progress document and code reconciliation |
-| `/sp-docs` is missing in an older installation | The earlier installer provided three commands; the documentation extension must also be implemented and installed |
-| Domain documentation contains paths or class names | SP-DOCS domain-format rules and high review; replace implementation references with business concepts |
-| `/sp-docs` demands a plan or successful tests | Standalone operation and the absence of phase/test-status prerequisites |
-
-After installation or an update, verify one small representative task end to end: ordinary build leaves the workflow inactive; `/sp-plan` changes only task documents; `/sdd` preserves existing changes and does no test work; `/sp-tests` uses local fakes and reports genuine failures; `/sp-docs` writes domain documentation to the selected external task directory using low drafting and high review, also works independently, and performs no test-status check; no phase changes branches or commits; actual worker model IDs match high/low assignments.
-
-These are installation acceptance checks, not a request to generate test infrastructure in every project.
-
-## 15. Maintenance and sources
-
-Keep general behavior in global `AGENTS.md`, phase-specific rules in commands/agent prompts, model IDs and permissions in OpenCode configuration, and project-specific commands/conventions in the repository's own instructions. Avoid copying the entire workflow into every task plan.
-
-The updated installer encodes this guide's latest decisions, including `/sp-docs`, its activation rule, documenter permissions and low/high routing. Future revisions must not restore earlier proposals for automatic commits, worktrees, test generation during `/sdd`, or documents inside `docs/superpowers/` in the repository. The feature documentation format must stay domain-based, without code references.
-
-This guide's operational choices come from the agreed personal requirements. Platform integration references:
-
-- [OpenCode custom commands](https://opencode.ai/docs/commands/) — Markdown command files, arguments and agent selection.
-- [Superpowers for OpenCode](https://github.com/obra/superpowers/blob/main/docs/README.opencode.md) — standard installation and plugin bootstrap.
-- [Superpowers user instruction precedence](https://github.com/obra/superpowers/blob/main/skills/using-superpowers/SKILL.md#user-instructions) — explicit user rules override skill workflows.
-
-The setup remains an agent-driven workflow. Instructions and permission configuration reduce mistakes but do not guarantee deterministic behavior, perfect isolation or full correctness. Completion reports must describe the checks actually performed.
+The workflow choices in this guide come from the agreed personal requirements. Reports must distinguish configured intent, inspected evidence and checks actually executed.
