@@ -1,0 +1,4 @@
+interface:
+  display_name: "Domenowe testy integracyjne JUnit"
+  short_description: "BDD, DisplayName i fixtures bez Mockito"
+  default_prompt: "Użyj $junit-domain-integration-tests, aby napisać domenowe testy integracyjne BDD z fixtures i @DisplayName, bez Mockito."

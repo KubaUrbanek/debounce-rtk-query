@@ -1,0 +1,4 @@
+interface:
+  display_name: "Workflow Optimizer"
+  short_description: "Analyze OpenCode sessions for recurring workflow friction"
+  default_prompt: "Analyze my recent OpenCode sessions and recommend evidence-backed workflow improvements."

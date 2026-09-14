@@ -1,0 +1,14 @@
+interface:
+  display_name: Grill Me → Plan
+  short_description: Dociekliwa rozmowa i plan implementacji w Markdown
+  default_prompt: Użyj $grill-me-to-plan, aby doprecyzować mój pomysł i zapisać ustalenia
+    oraz plan implementacji w pliku Markdown.
+  icon_small: assets/icon.svg
+  icon_large: assets/icon.svg
+policy:
+  products:
+  - chatgpt
+  - codex
+  - api
+  - atlas
+  allow_implicit_invocation: true

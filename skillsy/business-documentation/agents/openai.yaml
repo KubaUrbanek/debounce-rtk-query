@@ -1,0 +1,14 @@
+interface:
+  display_name: Dokumentacja biznesowa
+  short_description: Aktualizuj wiedzę o projekcie po zmianach biznesowych
+  default_prompt: Użyj $business-documentation, aby utworzyć lub zaktualizować dokumentację
+    biznesową na podstawie bieżącej zmiany.
+  icon_small: assets/icon.svg
+  icon_large: assets/icon.svg
+policy:
+  products:
+  - chatgpt
+  - codex
+  - api
+  - atlas
+  allow_implicit_invocation: true

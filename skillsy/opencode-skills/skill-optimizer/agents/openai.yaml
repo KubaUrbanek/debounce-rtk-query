@@ -1,0 +1,4 @@
+interface:
+  display_name: "Skill Optimizer"
+  short_description: "Audit and improve OpenCode skills"
+  default_prompt: "Audit this OpenCode skill and propose the smallest high-impact improvements."
