@@ -1,0 +1,14 @@
+interface:
+  display_name: Czytelne testy jednostkowe JUnit
+  short_description: Testy domenowe z fixtures i opisami scenariuszy
+  default_prompt: Użyj $junit-unit-tests, aby napisać czytelne testy jednostkowe z
+    fixtures i @DisplayName.
+  icon_small: assets/icon.svg
+  icon_large: assets/icon.svg
+policy:
+  products:
+  - chatgpt
+  - codex
+  - api
+  - atlas
+  allow_implicit_invocation: true

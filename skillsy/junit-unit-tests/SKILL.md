@@ -1,11 +1,20 @@
 ---
 name: junit-unit-tests
-description: Pisz i refaktoryzuj czytelne testy jednostkowe Java w JUnit z obowiązkowymi fixtures, @DisplayName i scenariuszami domenowymi given/when/then. Używaj przy dodawaniu, poprawianiu i porządkowaniu testów jednostkowych. Nie zastępuj tym skillem testów integracyjnych ani implementacji kodu produkcyjnego.
+description: Deleguj pisanie i refaktoryzację testów jednostkowych Java/JUnit do subagenta OpenAI Luna, z obowiązkowymi fixtures, @DisplayName i scenariuszami domenowymi given/when/then. Używaj przy dodawaniu, poprawianiu i porządkowaniu testów jednostkowych. Nie zastępuj tym skillem testów integracyjnych ani implementacji kodu produkcyjnego.
 ---
 
 # Czytelne testy jednostkowe JUnit
 
 Traktuj test jako wykonywalny przykład zachowania. Stosuj zasady czytelności i utrzymywalności inspirowane Clean Code Uncle Boba, z pierwszeństwem zrozumienia przez człowieka przed mechaniczną eliminacją powtórzeń i mnożeniem abstrakcji.
+
+## Wykonawca — wymagany subagent OpenAI Luna
+
+- Główny agent rozpoznaje zakres i oczekiwane zachowania, następnie deleguje pisanie i modyfikowanie testów oraz fixtures do subagenta korzystającego z modelu OpenAI Luna. Sam odpowiada za review i końcową weryfikację.
+- W środowisku udostępniającym `spawn_agent` i model `gpt-5.6-luna` wybierz jawnie `model: "gpt-5.6-luna"` oraz `fork_turns: "none"`; przekaż kompletny, samodzielny opis zadania. W innych środowiskach użyj dostępnego mechanizmu delegacji i sprawdź w konfiguracji, że wykonawca rzeczywiście korzysta z OpenAI Luna. Sama nazwa agenta „luna” nie potwierdza modelu; nie zgaduj identyfikatora dostawcy ani modelu.
+- Przekaż Lunie ten skill, instrukcje projektu, zakres plików, wymagane scenariusze i reguły, istniejące fixtures oraz polecenie uruchomienia testów. Zleć implementację, uruchomienie odpowiednich testów i raport wyników. Podczas jej pracy główny agent może niezależnie sprawdzać wymagania i przypadki brzegowe, bez równoczesnego edytowania tych samych plików.
+- Subagent Luna wykonuje zadanie bez dalszego delegowania. Ta sekcja nie wymaga, aby wykonawca uruchamiał kolejną Lunę.
+- Główny agent sprawdza rzeczywisty diff, zgodność scenariuszy z regułami, fixtures, `@DisplayName`, given/when/then oraz wynik wykonania. Potrzebne poprawki kodu testów przekazuje Lunie i ponownie ocenia rezultat; nie uznaje samego raportu subagenta za dowód poprawności.
+- Jeśli Luna lub delegacja są niedostępne, kontynuuj możliwą analizę i przygotowanie scenariuszy, a następnie wyjaśnij ograniczenie. Nie zastępuj Luny innym modelem ani samodzielnym pisaniem testów bez zgody użytkownika. Nie deklaruj użycia Luny bez potwierdzenia uruchomienia właściwego modelu.
 
 ## Rozpoznanie i zakres
 
