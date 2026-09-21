@@ -1,5 +1,97 @@
 # Bootstrap protocol
 
+## Mandatory depth upgrade
+
+The schemas below for the original draft/review are skeletons. The additional fields in this
+section are mandatory for every new stage and approval, including resumed old runs.
+
+After `prepare`, inspect structure and entry points through registered exploratory reads,
+then save a functional plan before submitting findings:
+
+```bash
+bash SKILL_DIR/scripts/bootstrap.sh --config CONFIG --repo REPO_ID organize --plan AREAS_JSON
+bash SKILL_DIR/scripts/bootstrap.sh --config CONFIG --repo REPO_ID findings
+```
+
+Example AREAS_JSON shape (replace every example with observed files and questions):
+
+```json
+{
+  "areas": [{
+    "id": "submission",
+    "files": ["src/OrderService.java"],
+    "purpose": "Trace submission from entry point through validation and persistence.",
+    "domain_questions": "Which states allow submission, by whom, and with which checks?",
+    "technical_questions": "Where are transactions, writes and outbound events performed?"
+  }],
+  "cross_area_strategy": "Reconcile submission with approval and event-consumer flows using shared identifiers and actual call contracts."
+}
+```
+
+Assign every included file one primary functional owner. Related dependencies may be read by
+multiple researchers. Do not allocate random or equal-sized chunk batches as semantic tasks.
+Reorganize when exploration discovers a better boundary or newly extracted files; organizing
+invalidates any staged draft/review. Save detailed per-area working notes in this run's state
+directory, not in active knowledge. Use stable finding IDs from `findings` (`chunk_id:index`,
+zero-based index). Findings must be concrete rules/mechanisms, not “this file handles X”.
+
+Add these top-level fields to the publication plan:
+
+```json
+{
+  "finding_dispositions": [{
+    "finding_id": "ACTUAL_CHUNK_ID:0",
+    "disposition": "documented",
+    "document_path": "knowledge/domain/order-submission.md",
+    "excerpt": "An exact passage from the document describing this finding."
+  }],
+  "area_dossiers": [{
+    "id": "submission",
+    "files": ["src/OrderService.java"],
+    "evidence_chunks": ["ACTUAL_CHUNK_ID"],
+    "domain_assessment": "Specific implemented rules, conditions, transitions and actor constraints, or evidenced absence.",
+    "technical_assessment": "Actual call path, persistence boundaries, integration contracts and configuration.",
+    "exceptions_and_unknowns": "Observed failure paths, conditional behavior and external unknowns.",
+    "flow_ids": ["order-submission"]
+  }]
+}
+```
+
+Every finding needs one disposition. `documented` must reference an exact excerpt in a staged
+detailed document with the finding's source chunk in evidence; essence.md cannot be the sole
+destination. Domain findings go to domain notes; database findings to database notes.
+For a true duplicate use `disposition: duplicate`, `duplicate_of: DOCUMENTED_FINDING_ID` and a
+specific `reason`; it must point directly to a documented item. Only documentation-kind findings
+can be `omitted` with a specific reason (for example prose contradicted by code). Do not relabel
+behavioral findings as documentation to bypass retention. All dossiers must match planned
+primary files and include evidence for each file. Empty flow_ids requires no_flows_reason.
+
+The independent reviewer must read at least one range of every included file and all additional
+ranges needed for complete important flows. This is a minimum mechanical floor, not permission
+to sample away conditions. Work in batches with durable review notes. Inspect every proposed
+document, compare findings and omissions, and add `document_checks` to the review JSON: an
+object mapping every exact document path to a concrete explanation of checks and source evidence.
+Generic approvals are unacceptable even if they pass the schema. Return changes_requested
+when a dossier or document is too shallow; restage after corrections.
+
+## Repair a shallow completed run
+
+Use only when the user asks to repair an inadequate completed bootstrap:
+
+```bash
+bash SKILL_DIR/scripts/bootstrap.sh --config CONFIG --repo REPO_ID repair --reason "Completed documentation is too shallow"
+```
+
+This preserves the pinned commit, snapshot and published notes, writes a backup of prior run
+state under the run's internal history/, and reopens analysis. Old receipts/findings/review are
+cleared from the active run so superficial evidence cannot simply be republished. Reorganize,
+reanalyze and independently review the original snapshot, then enrich existing notes with
+current hashes. Do not erase unrelated facts or changes learned after that snapshot: compare
+source dates, preserve later facts and ask the user when chronology is uncertain. Repair is
+not a rescan of today's branch and never fetches a replacement snapshot. Missing snapshot
+objects block repair. Normal prepare still refuses completed runs. Never edit completion flags
+or delete state to work around the guard.
+
 This protocol belongs only to the initial repository-analysis skill. The coordinator owns the
 publication plan; exploratory and independent-review agents only produce intermediate evidence.
 Use actual delegation identities for `--worker`, never invented alternate names for one agent.

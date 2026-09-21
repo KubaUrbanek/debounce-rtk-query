@@ -5,6 +5,7 @@ for skill in daily-develop-second-brain my-work-second-brain distill-second-brai
   mkdir -p "$PACKAGE_DIR/skills/$skill/references"
   cp "$PACKAGE_DIR/runtime/brain.py" "$PACKAGE_DIR/skills/$skill/scripts/brain.py"
   cp "$PACKAGE_DIR/runtime/protocol.md" "$PACKAGE_DIR/skills/$skill/references/protocol.md"
+  cp "$PACKAGE_DIR/runtime/analysis-depth.md" "$PACKAGE_DIR/skills/$skill/references/analysis-depth.md"
 done
 for skill in refine-second-brain-thoughts link-second-brain-notes; do
   cp "$PACKAGE_DIR/runtime/thoughts.py" "$PACKAGE_DIR/skills/$skill/scripts/thoughts.py"

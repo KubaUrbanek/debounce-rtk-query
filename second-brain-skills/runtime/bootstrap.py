@@ -291,10 +291,13 @@ class Bootstrap:
 
     def submit(self,worker,result):
         s=self.load(); self.editable(s); self.worker(s,worker,'explorer')
+        if not s.get('analysis_plan'): brain.fail('Run organize with a functional area plan before submitting analysis')
         chunk=result.get('chunk_id')
         if chunk not in {c['id'] for c in s['chunks']}: brain.fail('Unknown chunk')
         if not result.get('receipt') or s['reads'].get(worker,{}).get(chunk)!=result['receipt']:
             brain.fail('A matching read receipt is required before submission')
+        if chunk in s['results'] and s['results'][chunk]['worker']!=worker:
+            brain.fail('Another explorer owns the submitted findings; ask its owner to revise, do not overwrite')
         findings=result.get('findings',[])
         if not isinstance(findings,list): brain.fail('findings must be a list')
         for f in findings:
@@ -368,12 +371,107 @@ class Bootstrap:
             flow_ids.add(f['id']); self.evidence(s,f.get('evidence_chunks'))
             if not isinstance(f.get('stages'),list) or not f['stages']: brain.fail('Flow stages required')
             for stage in f['stages']: nonempty(stage,'flow stage')
+        self.depth_checks(s,plan,flow_ids)
         future={brain.safe(self.root,p) for p in paths}|{self.root/'index.md'}
         for d in docs:
             p=brain.safe(self.root,d['path'])
             for t in brain.targets(p,d['content']):
                 if not t.is_relative_to(self.root) or t.is_relative_to(self.root/'.state') or (not t.exists() and t not in future):
                     brain.fail('Broken/outside proposed link: '+str(t))
+
+    def findings(self,s):
+        return {chunk+':'+str(i):dict(f,chunk_id=chunk)
+                for chunk,r in s['results'].items() for i,f in enumerate(r.get('findings',[]))}
+
+    def organize(self,plan):
+        s=self.load(); self.editable(s)
+        areas=plan.get('areas',[]); assigned=[]; ids=set()
+        included={f['path'] for f in s['files'] if f['status']=='included'}
+        if not areas: brain.fail('Plan requires cohesive functional areas')
+        for a in areas:
+            nonempty(a.get('id'),'area id')
+            if a['id'] in ids: brain.fail('Duplicate planned area')
+            ids.add(a['id'])
+            for key in ('purpose','domain_questions','technical_questions'):
+                nonempty(a.get(key),key)
+            if not a.get('files') or not set(a['files'])<=included: brain.fail('Invalid area files')
+            assigned.extend(a['files'])
+        if set(assigned)!=included or len(assigned)!=len(included):
+            brain.fail('Assign each included file one primary area; dependencies may be read across areas')
+        nonempty(plan.get('cross_area_strategy'),'cross_area_strategy')
+        s['analysis_plan']=plan; s['draft']=None; s['review']=None; s.pop('draft_hash',None)
+        self.save(s)
+        return {'areas':len(areas),'assigned_files':len(assigned)}
+
+    def depth_checks(self,s,plan,flow_ids):
+        docs={d['path']:d for d in plan['documents']}
+        findings=self.findings(s)
+        dispositions=plan.get('finding_dispositions',[])
+        if len(dispositions)!=len(findings) or {d.get('finding_id') for d in dispositions}!=set(findings):
+            brain.fail('Account for every finding in finding_dispositions; run findings for stable IDs')
+        disposition_by_id={d['finding_id']:d for d in dispositions}
+        for item in dispositions:
+            f=findings[item['finding_id']]
+            if item.get('disposition')=='documented':
+                path=item.get('document_path'); excerpt=item.get('excerpt')
+                nonempty(excerpt,'documented excerpt')
+                if path not in docs or path=='knowledge/essence.md' or excerpt not in docs[path]['content']:
+                    brain.fail('Finding must map to an exact excerpt in a detailed document, not the guide')
+                if f['chunk_id'] not in docs[path]['evidence_chunks']: brain.fail('Document lacks finding evidence')
+                if f['kind']=='domain' and not path.startswith('knowledge/domain/'):
+                    brain.fail('Domain findings require domain documentation')
+                if f['kind']=='database' and docs[path].get('kind')!='database':
+                    brain.fail('Database findings require a database document')
+            elif item.get('disposition')=='duplicate':
+                target=item.get('duplicate_of')
+                canonical_item=disposition_by_id.get(target,{})
+                if target==item['finding_id'] or canonical_item.get('disposition')!='documented':
+                    brain.fail('Duplicate must point directly to a documented finding')
+                nonempty(item.get('reason'),'duplicate explanation')
+            elif item.get('disposition')=='omitted':
+                if f['kind']!='documentation': brain.fail('Behavioral/technical findings cannot be silently omitted')
+                nonempty(item.get('reason'),'documentation-only omission explanation')
+            else: brain.fail('Invalid finding disposition')
+        dossiers=plan.get('area_dossiers',[])
+        if not dossiers: brain.fail('Functional area dossiers are required')
+        planned={a['id']:a for a in s.get('analysis_plan',{}).get('areas',[])}
+        if {a.get('id') for a in dossiers}!=set(planned): brain.fail('Dossiers must match the recorded analysis plan')
+        included={f['path'] for f in s['files'] if f['status']=='included'}
+        covered=set(); ids=set()
+        for a in dossiers:
+            nonempty(a.get('id'),'area id')
+            if a['id'] in ids: brain.fail('Duplicate area')
+            ids.add(a['id'])
+            files=a.get('files',[])
+            if not files or not set(files)<=included: brain.fail('Area requires included file paths')
+            if set(files)!=set(planned[a['id']]['files']): brain.fail('Dossier files differ from planned primary ownership')
+            covered.update(files); self.evidence(s,a.get('evidence_chunks'))
+            chunk_files={c['path'] for c in s['chunks'] if c['id'] in a['evidence_chunks']}
+            if not set(files)<=chunk_files: brain.fail('Each area file requires evidence')
+            for key in ('domain_assessment','technical_assessment','exceptions_and_unknowns'):
+                nonempty(a.get(key),key)
+            if not set(a.get('flow_ids',[]))<=flow_ids: brain.fail('Unknown area flow')
+            if not a.get('flow_ids'): nonempty(a.get('no_flows_reason'),'area no_flows_reason')
+        if covered!=included: brain.fail('Area dossiers omit included files')
+
+    def repair(self,reason):
+        s=self.load(); nonempty(reason,'repair reason')
+        if s['status']!='completed': brain.fail('Repair is only for a completed bootstrap; otherwise resume')
+        if self.journal.exists() or (self.root/'.state/thoughts-publishing.json').exists():
+            brain.fail('Recover interrupted publication first')
+        for other in (self.root/'.state/bootstrap').glob('*/state.json'):
+            if other!=self.state_path and json.loads(other.read_text())['status']!='completed':
+                brain.fail('Only one repository initialization or repair at a time')
+        # Verify the original snapshot still exists; never replace it with current remote code.
+        self.git('cat-file','-e',s['commit']+'^{commit}')
+        backup=self.home/'history'/('before-repair-'+secrets.token_hex(8)+'.json')
+        write_json(backup,s)
+        s.update(status='analyzing',results={},reads={},workers={},draft=None,review=None)
+        s.pop('analysis_plan',None)
+        for key in ('draft_hash','baseline','published_draft_hash','completed_at'): s.pop(key,None)
+        s.setdefault('events',[]).append({'event':'repair','reason':reason,'at':stamp(),'backup':str(backup)})
+        self.save(s)
+        return self.status()
 
     def stage(self,plan):
         s=self.load(); self.editable(s); self.coverage(s)
@@ -395,6 +493,15 @@ class Bootstrap:
         issues=result.get('issues')
         if not isinstance(issues,list): brain.fail('issues must be a list')
         if result['verdict']=='approved' and issues: brain.fail('Open issues prohibit approval')
+        if result['verdict']=='approved':
+            read_ids=set(s['reads'].get(worker,{}))
+            reviewed_files={c['path'] for c in s['chunks'] if c['id'] in read_ids}
+            included={f['path'] for f in s['files'] if f['status']=='included'}
+            if reviewed_files!=included: brain.fail('Reviewer must inspect every included file; sample chunks plus all relevant flow ranges')
+            checks=result.get('document_checks',{})
+            if set(checks)!={d['path'] for d in s['draft']['documents']}:
+                brain.fail('Independent substantive check required for every document')
+            for check in checks.values(): nonempty(check,'document review')
         if result['verdict']=='changes_requested' and not issues: brain.fail('List the requested corrections')
         s['review']=dict(result,worker=worker,reviewed_at=stamp()); self.save(s)
         return {'verdict':result['verdict']}
@@ -471,7 +578,9 @@ def main():
     p.add_argument('--repo',required=True)
     sub=p.add_subparsers(dest='command',required=True)
     cmd=sub.add_parser('prepare'); cmd.add_argument('--branch',required=True)
-    sub.add_parser('status')
+    sub.add_parser('status'); sub.add_parser('findings')
+    cmd=sub.add_parser('repair'); cmd.add_argument('--reason',required=True)
+    cmd=sub.add_parser('organize'); cmd.add_argument('--plan',required=True)
     cmd=sub.add_parser('claim'); cmd.add_argument('--worker',required=True); cmd.add_argument('--role',choices=['explorer','reviewer'],required=True)
     cmd=sub.add_parser('read'); cmd.add_argument('--worker',required=True); cmd.add_argument('--chunk',required=True)
     cmd=sub.add_parser('submit'); cmd.add_argument('--worker',required=True); cmd.add_argument('--result',required=True)
@@ -485,6 +594,9 @@ def main():
     a=p.parse_args(); c=brain.config(a.config); boot=Bootstrap(c,a.repo)
     with brain.lock(boot.root):
         if a.command=='prepare': result=boot.prepare(a.branch)
+        elif a.command=='repair': result=boot.repair(a.reason)
+        elif a.command=='organize': result=boot.organize(json.loads(Path(a.plan).read_text()))
+        elif a.command=='findings': result=boot.findings(boot.load())
         elif a.command=='claim': result=boot.claim(a.worker,a.role)
         elif a.command=='read': result=boot.read(a.worker,a.chunk)
         elif a.command=='submit': result=boot.submit(a.worker,json.loads(Path(a.result).read_text()))

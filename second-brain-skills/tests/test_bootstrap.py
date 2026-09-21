@@ -43,6 +43,9 @@ class BootstrapTests(unittest.TestCase):
                               capture_output=True, text=True).stdout.strip()
 
     def analyze(self):
+        self.b.organize({'areas':[{'id':'submission','files':[f['path'] for f in self.b.load()['files'] if f['status']=='included'],
+            'purpose':'Submission and storage definitions','domain_questions':'What does submission return?',
+            'technical_questions':'What schema is defined?'}], 'cross_area_strategy':'Trace app to schema; do not invent a database call.'})
         self.b.claim('explorer', 'explorer')
         for chunk in self.b.status()['pending_chunks']:
             result = self.b.read('explorer', chunk['id'])
@@ -55,7 +58,9 @@ class BootstrapTests(unittest.TestCase):
         s = self.b.load()
         ids = list(s['results'])
         paths = ['knowledge/essence.md', 'knowledge/technical/orders/database/schema.md']
-        return {'documents': [{'path': p, 'content': '# '+Path(p).stem+'\n\nFixture knowledge.\n',
+        findings=self.b.findings(s)
+        detail='\n'.join(f['text'] for f in findings.values())
+        return {'documents': [{'path': p, 'content': '# '+Path(p).stem+'\n\nFixture knowledge.\n'+detail,
                                'kind': 'database' if '/database/' in p else 'technical',
                                'evidence_chunks': ids} for p in paths],
                 'file_summaries': [{'path': f['path'], 'summary': 'Observed source behavior.',
@@ -63,13 +68,54 @@ class BootstrapTests(unittest.TestCase):
                 'dimensions': {d: {'assessment': 'Inspected fixture '+d, 'evidence_chunks': ids}
                                for d in boot.DIMENSIONS},
                 'flows': [{'id': 'submit', 'description': 'Submission returns accepted.',
-                           'stages': ['entry point', 'return value'], 'evidence_chunks': ids}]}
+                           'stages': ['entry point', 'return value'], 'evidence_chunks': ids}],
+                'finding_dispositions':[{'finding_id':k,'disposition':'documented','document_path':paths[1],
+                                         'excerpt':f['text']} for k,f in findings.items()],
+                'area_dossiers':[{'id':'submission','files':[f['path'] for f in s['files'] if f['status']=='included'],
+                    'evidence_chunks':ids,'domain_assessment':'Submission returns accepted.',
+                    'technical_assessment':'Schema defines integer primary key.',
+                    'exceptions_and_unknowns':'No persistence call exists in fixture.', 'flow_ids':['submit']}]}
 
     def approve(self):
         self.b.claim('independent', 'reviewer')
-        self.b.read('independent', self.b.load()['chunks'][0]['id'])
+        for chunk in self.b.load()['chunks']: self.b.read('independent', chunk['id'])
         self.b.review('independent', {'draft_hash': self.b.load()['draft_hash'], 'verdict': 'approved',
-                                      'issues': [], 'checks': {k: 'Checked fixture '+k for k in boot.CHECKS}})
+                                      'issues': [], 'checks': {k: 'Checked fixture '+k for k in boot.CHECKS},
+                                      'document_checks':{d['path']:'Compared fixture observations with source.' for d in self.b.load()['draft']['documents']}})
+
+    def test_missing_finding_or_generic_guide_cannot_pass(self):
+        self.analyze()
+        p=self.plan(); p['finding_dispositions'].pop()
+        with self.assertRaisesRegex(ValueError,'every finding'): self.b.stage(p)
+        p=self.plan(); p['finding_dispositions'][0]['document_path']='knowledge/essence.md'
+        with self.assertRaisesRegex(ValueError,'detailed document'): self.b.stage(p)
+        p=self.plan(); p['finding_dispositions'][0]['excerpt']='Not present in the actual document'
+        with self.assertRaisesRegex(ValueError,'exact excerpt'): self.b.stage(p)
+
+    def test_unplanned_analysis_and_unaccounted_area_rejected(self):
+        self.b.claim('explorer','explorer'); c=self.b.load()['chunks'][0]
+        r=self.b.read('explorer',c['id'])
+        with self.assertRaisesRegex(ValueError,'organize'):
+            self.b.submit('explorer',{'chunk_id':c['id'],'receipt':r['receipt'],'no_knowledge_reason':'No detail'})
+        self.analyze(); p=self.plan(); p['area_dossiers'][0]['files'].pop()
+        with self.assertRaises(ValueError): self.b.stage(p)
+
+    def test_repair_completed_keeps_snapshot_and_documents(self):
+        self.analyze(); self.b.stage(self.plan()); self.approve(); self.b.publish()
+        old=self.b.load()['commit']; text=(self.root/'knowledge/essence.md').read_text()
+        self.b.repair('Documentation too shallow')
+        self.assertEqual(old,self.b.load()['commit'])
+        self.assertEqual({},self.b.load()['results'])
+        self.assertTrue(list((self.b.home/'history').glob('before-repair-*.json')))
+        self.assertEqual(text,(self.root/'knowledge/essence.md').read_text())
+        with self.assertRaises(ValueError): self.b.publish()
+
+    def test_review_sampling_one_file_cannot_approve(self):
+        self.analyze(); self.b.stage(self.plan()); self.b.claim('independent','reviewer')
+        self.b.read('independent',self.b.load()['chunks'][0]['id'])
+        with self.assertRaisesRegex(ValueError,'every included file'):
+            self.b.review('independent',{'draft_hash':self.b.load()['draft_hash'],'verdict':'approved',
+                'issues':[],'checks':{k:'Checked' for k in boot.CHECKS}})
 
     def test_inventory_and_pinned_resume(self):
         s = self.b.status()

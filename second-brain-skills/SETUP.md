@@ -140,7 +140,26 @@ Invalid dates remain in inbox. A note without durable knowledge can be marked do
 creating a topic. Backlinks are generated for active notes; archive content is never read
 or rewritten. System reports may be restored by known filename for a requested rerun.
 
-## Verification and limitations
+## Repairing shallow bootstrap documentation
+
+Install this updated package with `bash install.sh`; your YAML is preserved. Existing completed
+runs can now be explicitly repaired. In OpenCode ask:
+
+> Use bootstrap-second-brain to repair the completed initialization for repository REPO_ID.
+> Keep its original pinned snapshot. Plan by coherent functional areas, reanalyze full flows,
+> enrich existing domain and technical notes, and require the new independent depth review.
+
+Do not delete state or run a second initialization under a different repository ID. The `repair`
+command backs up previous state, clears prior analysis receipts/results, and keeps active notes
+until the replacement passes all gates. For a merely interrupted run, resume normally instead.
+Repair does not update the snapshot to today's remote branch. Preserve later knowledge already
+learned from inbox updates; ask about conflicting chronology rather than reverting it.
+
+See [analysis upgrade and acceptance](docs/analysis-upgrade.md). This version requires functional
+planning and finding-to-document mappings in bootstrap plans; older staged plans must be expanded
+and reviewed again. Other workflows keep their existing publication JSON shape.
+
+## Verification details
 
 Run `python3 -m unittest discover -s tests -v` in the unpacked package.
 Tests use temporary repositories and stubbed GitLab responses. Live workplace glab access
