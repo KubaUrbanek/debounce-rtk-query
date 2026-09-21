@@ -1,0 +1,17 @@
+version: 2
+brain_dir: /home/you/second-brain
+timezone: Europe/Warsaw
+max_parallel_agents: 4
+author_emails:
+  - you@company.example
+repositories:
+  - id: case-service
+    path: /home/you/work/case-service
+    gitlab_host: gitlab.company.example
+    gitlab_project: team/case-service
+    remote: origin
+  - id: notification-service
+    path: /home/you/work/notification-service
+    gitlab_host: gitlab.company.example
+    gitlab_project: team/notification-service
+    remote: origin
