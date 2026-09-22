@@ -138,29 +138,6 @@ class RuntimeTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             b.publish(self.c,{'stage':'daily','documents':[{'path':str(p.relative_to(self.root)),'content':content}]})
 
-    def test_system_merged_timestamp_and_target_filter(self):
-        sample=[
-            {'iid':1,'merged_at':'2026-09-17T22:01:00Z','target_branch':'develop-v2','title':'Earlier commit merged today'},
-            {'iid':2,'merged_at':'2026-09-18T22:00:00Z','target_branch':'develop'},
-            {'iid':3,'merged_at':'2026-09-18T10:00:00Z','target_branch':'main'}]
-        def api(repo,url):
-            if '/diffs?' in url: return [{'diff':'change'}]
-            if url.endswith('/1'): return {'changes_count':'1','diff_refs':{'base_sha':'a','head_sha':'b'}}
-            return sample
-        with patch.object(b,'api',api), patch.object(b,'today',return_value='2026-09-20'):
-            result=b.collect_system(self.c,'2026-09-18')
-        self.assertEqual([1],[m['iid'] for m in result['repositories'][0]['merge_requests']])
-        self.assertEqual([],result['errors'])
-
-    def test_partial_fetch_not_empty_success(self):
-        with patch.object(b,'api',side_effect=RuntimeError('unavailable')):
-            result=b.collect_system(self.c,b.today())
-        self.assertFalse(result['activity']); self.assertTrue(result['errors'])
-
-    def test_pagination(self):
-        with patch.object(b,'api',side_effect=[[{'x':1}]*100,[{'x':2}]]):
-            self.assertEqual(101,len(list(b.pages(self.c['repositories'][0],'endpoint'))))
-
     def test_dst_days(self):
         start,end=b.bounds('2026-03-29')
         self.assertEqual(23*3600,end.timestamp()-start.timestamp())
@@ -172,7 +149,7 @@ class RuntimeTests(unittest.TestCase):
         text=(Path(__file__).parents[1]/'config.example.yaml').read_text()
         b.atomic(p,text)
         self.assertEqual('case-service',b.config(p)['repositories'][0]['id'])
-        b.atomic(p,text.replace('version: 2','version: 2\nversion: 2'))
+        b.atomic(p,text.replace('version: 3','version: 3\nversion: 3'))
         with self.assertRaises(ValueError): b.config(p)
 
     def test_real_local_commits_author_date_and_dedup(self):

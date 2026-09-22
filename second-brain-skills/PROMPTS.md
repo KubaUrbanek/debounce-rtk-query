@@ -1,117 +1,71 @@
-# Example prompts
+# Copyable prompts
 
-Copy a prompt into OpenCode and replace placeholders such as `REPO_ID`, `BRANCH`,
-`YYYY-MM-DD` and draft paths. `REPO_ID` is the YAML repository `id`, not its GitLab URL.
-Names below request that OpenCode load a skill; they are not shell or slash commands.
-Prompts are English, as are generated documents; you can ask equivalent questions in Polish.
-See the [skill guide](SKILLS-GUIDE.md) for inputs, outputs and boundaries.
+Paste a prompt into OpenCode. Replace REPO_ID with its YAML id, not a project URL. Names below
+request loading a skill; they are not slash commands or shell commands. Equivalent Polish prompts
+are welcome; generated notes remain English. See [skill guide](SKILLS-GUIDE.md) and [setup](SETUP.md).
 
-## Initial repository documentation — available
+## First analysis or subsequent update
 
 ```text
-Use bootstrap-second-brain to initialize repository REPO_ID from remote branch BRANCH.
-Trace real entry points end to end. Queue all necessary flow and residual tasks with
-at most four active workers, replacing each completed worker with a fresh one.
-Preserve detailed rules, exceptions and failure behavior. Write domain documentation
-for nontechnical readers; put implementation and database details in technical notes.
-Publish only after complete source coverage and independent review.
+Use second-brain-actualize to synchronize knowledge for repository REPO_ID using its
+remote branch configured in YAML. Use the completed bootstrap commit if available;
+otherwise use the last successful actualization checkpoint or perform a full initial
+analysis when there is no state. Analyze cumulative changes and complete affected flows,
+then update knowledge directly. Keep domain documentation understandable to nontechnical users.
 ```
 
-Resume an interrupted bootstrap, not a completed one:
+The same request works on later runs; no date or manual commit list is needed.
+
+## Resume an interrupted run
 
 ```text
-Use bootstrap-second-brain to inspect and resume the interrupted analysis of REPO_ID.
-Keep its pinned snapshot and completed task results. Follow the recovery protocol
-if publication was interrupted, and report any blocker requiring my decision.
+Use second-brain-actualize to resume the interrupted run for REPO_ID. Keep its pinned
+target and completed task results. Follow publication recovery if needed; leave newer
+remote commits for the next invocation. Report any blocker requiring my decision.
 ```
 
-## Team changes for a date — available
+## Answer a baseline question
+
+Only use this when the skill asks because its saved baseline cannot be used:
 
 ```text
-Use daily-develop-second-brain to summarize everything merged on YYYY-MM-DD into
-develop-prefixed target branches across configured repositories. Group changes by
-meaningful outcome in one inbox file. Clearly identify incomplete evidence.
+For REPO_ID, COMMIT_SHA is already reflected in the documentation. Validate it as an
+ancestor of the pinned target and analyze only changes after it. Do not silently choose
+another baseline or reset the documentation.
 ```
 
-## Today's personal work — available
+## Process manually supplied inbox materials
 
 ```text
-Use my-work-second-brain to create or update today's personal daily. Include all my
-collected commits, including local unpushed experiments and alternative approaches,
-and all eligible inbox conversations, emails and meeting notes. Group by topic and
-preserve concrete outcomes and explicit agreements. Use today's DD MM YYYY in the title.
+Use second-brain-process-inbox to process all new eligible inbox notes. Read complete
+conversations and update existing topics where they match. Preserve explicit rules,
+conditions, exceptions and agreements. Separate domain, technical and database knowledge.
+Ask me about factual conflicts or unclear scope before writing. Maintain meaningful links.
 ```
 
-After adding more notes later today:
+## Create today's work summary
 
 ```text
-Use my-work-second-brain to update today's existing daily with newly available activity.
-Keep earlier documented activity even if its source has already been archived.
-Do not read archive or include my thought drafts.
+Use second-brain-my-work to create or update today's personal daily. Include all my
+collected commits, local unpushed experiments and alternative approaches, plus eligible
+inbox conversations, emails and meeting notes. Group by topic and preserve attribution,
+concrete outcomes and explicit next steps. Include today's DD MM YYYY in the title.
 ```
 
-## Inbox into knowledge — available
+## Add activity later today
 
 ```text
-Use distill-second-brain-inbox to process all new eligible inbox notes. Read complete
-sources and update existing topics when they match. Preserve business rules, conditions
-and exceptions. Separate nontechnical domain knowledge, technical knowledge and SQL/NoSQL
-documentation. Ask me about factual conflicts or unclear repository scope before writing.
-Update the linked essence and archive sources only after their required stages finish.
+Use second-brain-my-work to update today's existing daily with newly available activity.
+Preserve previously documented work whose sources are now archived. Do not read archive
+or include personal thoughts. Keep the report concise without losing distinct outcomes.
 ```
 
-## Refine thoughts — available
+## Ask for a status explanation
 
 ```text
-Use refine-second-brain-thoughts to process my pending drafts. Split ideas, learnings
-and reflections by meaning. Extend the single ideas note and matching topical learning
-or reflection notes. Preserve my reasoning and alternative views; add only new substance.
-Find relevant links yourself and ask if my intended meaning is unclear. Do not update daily.
+Use second-brain-actualize to inspect status for REPO_ID without starting a new run.
+Explain the saved checkpoint, any pinned target, unfinished tasks and blockers in Polish.
 ```
 
-For one selected draft:
-
-```text
-Use refine-second-brain-thoughts to process only thoughts/drafts/MY-DRAFT.md.
-Choose suitable titles and existing target notes yourself. Keep any suggestions you
-add distinct from my own thoughts, and archive the original after successful publication.
-```
-
-## Connect finished notes — available
-
-```text
-Use link-second-brain-notes to review all eligible finished notes and add meaningful
-reciprocal links with brief explanations. Preserve substantive text and distinguish
-personal proposals from implemented behavior. Do not inspect inbox, drafts or archive.
-```
-
-## Repository synchronization — planned, not executable in this package
-
-The following prompts describe the agreed replacement workflow. The working name
-`sync-repository-second-brain` has no installed skill or script in this version.
-Do not run these prompts until that implementation is delivered. See the
-[synchronization specification](docs/repository-sync-design.md).
-
-First run and subsequent runs deliberately use the same request:
-
-```text
-Use sync-repository-second-brain to synchronize knowledge for repository REPO_ID.
-Use its remote branch configured in YAML. With no checkpoint, analyze the complete
-current source snapshot; otherwise analyze changes after the last published checkpoint
-and all affected end-to-end flows. Update knowledge directly without an inbox report.
-```
-
-Resume interrupted work:
-
-```text
-Use sync-repository-second-brain to resume REPO_ID at its already pinned target commit,
-reusing completed tasks. Leave newer remote changes for the next invocation.
-```
-
-Answer only when the skill asks for a replacement baseline:
-
-```text
-For REPO_ID, use COMMIT_SHA as the baseline already covered by the documentation.
-Analyze only changes after it. Validate that it belongs to the configured branch's
-history before continuing; do not silently choose a different baseline.
-```
+No removed skill names or planned-only commands are required. Completed bootstrap state is
+imported automatically by the actualization script; never edit state.json by hand to advance it.
