@@ -31,6 +31,10 @@ Do not expose credentials or dump code into final reports.
    Include a separate Database changes section when SQL/NoSQL changes exist. Preserve concrete schema/document-model, query, migration, index, partition and TTL facts visible in the merged changes, scoped by repo ID. This section supplies evidence for later database documentation; do not connect to a database.
 7. Prepare the publish plan from the protocol. Target `inbox/YYYY-MM-DD-system.md`, stage `system`, with frontmatter date, include_in_daily=false, type=system-summary, repositories as comma-separated stable IDs. H1: `Daily summary — DD MM YYYY`.
 8. Include functional outcomes, technical outcomes, explicit decisions/constraints, coverage gaps and Sources. This is an inbox source for knowledge extraction, not a message to teammates. Keep existing confirmed information on partial reruns. A second run updates this one file.
+   Functional outcomes must be understandable to nontechnical users: what behavior changed,
+   for whom, under which conditions and with what result. Keep endpoint names, classes,
+   transports and database details in technical/database sections so distillation can separate
+   business meaning from implementation. Preserve both kinds of evidence without mixing them.
    Review every material finding against an output passage or reasoned exclusion before
    publication. The report may have a brief overview, but retain detailed thematic sections:
    the distillation skill cannot recover omitted rules by reading code. Avoid arbitrary

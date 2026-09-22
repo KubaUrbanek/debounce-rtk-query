@@ -4,6 +4,10 @@ description: Create today's personal daily from all local and remote commits by 
 ---
 # Personal daily
 
+Keep business outcomes readable without implementation knowledge. Put relevant implementation
+details in technical work descriptions. This does not remove technical activity from daily;
+it preserves the distinction between business behavior and engineering work.
+
 Never use thoughts/drafts/ or thoughts/notes/ as personal daily input, even if linked from
 another note. Those materials have their own workflow and are explicitly excluded from daily.
 

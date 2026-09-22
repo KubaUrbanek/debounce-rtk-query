@@ -29,6 +29,13 @@ Do not expose credentials or dump code into final reports.
 5. Shared domain knowledge: `knowledge/domain/`. Technical: `knowledge/technical/shared/` for reusable ideas, `knowledge/technical/REPO_ID/` for implementation details. Agent chooses based on explicit scope; ask if ambiguous. Cross-project domain differences remain explicitly scoped.
    Store SQL and NoSQL documentation separately in `knowledge/technical/REPO_ID/database/` (or `unknown/database/` after deferred scope). Describe tables/documents, keys, relations, indexes, partition keys, TTL, migrations and read/write behavior only when explicitly present in inbox evidence. Link database notes to application flows and shared domain concepts; preserve repository differences. Never connect to a database or reread repository code. Keep initial code-derived documentation up to date using the same topic paths.
 6. Update `knowledge/essence.md` as a concise guide with “Technical knowledge” and “Domain knowledge” sections and links, not a duplicate knowledge dump.
+   Domain topics are for nontechnical users: roles, requirements, rules, visible results and
+   exceptions. Route REST/API calls, classes, database structures and other implementation
+   details exclusively to technical notes. Separate mixed content in touched existing domain
+   notes, preserving the extracted technical facts in their technical documents. This editorial
+   separation needs no extra approval; genuine factual conflicts still do. Do not invent UI
+   behavior or business meaning absent from sources. Optional technical/source links use neutral
+   labels and business-language explanations.
    The linked topic notes must explain the concrete supported behavior in depth. Preserve
    existing qualifications, exceptions and examples when extending a note; do not replace rich
    documentation with a shorter summary. Keep independent business flows and technical

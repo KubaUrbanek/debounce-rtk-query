@@ -29,9 +29,10 @@ For each relevant topic, explain **what happens, under which conditions, why whe
 what changes, and what happens instead on alternate paths**. Cover the dimensions actually
 supported by the allowed evidence; do not create empty boilerplate sections for every item.
 
-- Domain: actors, concepts and relationships; lifecycle and state transitions; prerequisites,
-  guards, business rules, calculations, validation and authorization; exceptions, rejection
-  paths, side effects and observable outcomes. Preserve exact thresholds/enums where material.
+- Domain: documentation for a nontechnical user. Explain who can do what, when, required
+  information, business rules, calculations, visible statuses, results and exceptions in plain
+  business language. Preserve meaningful thresholds and explain status names; do not expose
+  internal enum identifiers merely because they occur in code.
 - Technical: component responsibilities and boundaries; entry points and call/event flow;
   contracts, configuration switches, transaction boundaries, concurrency, ordering, retries,
   idempotency, failure handling and operational constraints where established.
@@ -49,6 +50,42 @@ Use topical documents with descriptive headings and examples drawn from evidence
 justify sparse topic documents. Do not document every method as its own note or copy whole files.
 
 ## Adversarial completeness review
+
+### Separate business meaning from implementation
+
+`knowledge/domain/` is user-facing business documentation, not an architectural description.
+Assume the reader does not know REST, Kafka, programming, database schemas or service internals.
+Explain the process and consequences without those concepts. Analysis of implementation is
+still necessary to establish behavior; the discovery method does not determine domain wording.
+
+Keep classes, methods, packages, file paths, endpoint URLs, HTTP verbs, payload/DTO fields,
+topics, cron expressions, tables, columns, SQL, frameworks and deployment wiring in technical
+notes (database internals in their separate directory). Business timing, required information,
+who is notified, unavailable information and business retention periods remain domain facts
+when evidenced. Express the effect, not the mechanism. Use established user-visible names or
+neutral descriptions; never invent screen labels, actions, motives or guarantees. Background
+processes can be described as automatic system behavior.
+
+Split mixed findings into business and technical statements with independent evidence mapping.
+Do not copy class/call descriptions into domain prose or discard technical evidence. Keep code
+traceability in internal ledgers and technical notes. Domain notes may have discreet optional
+links labelled `Technical reference` or `Source material`; the body must stand on its own.
+Explain domain-to-domain links in business language. Do not introduce implementation detail
+through link labels, connection explanations or examples.
+
+Example, only when evidenced: `Only a reviewer may approve a submitted case. If required
+information is missing, approval is refused and the case remains awaiting review.`
+Document the actual controller/service, authorization predicate, validation path, state update
+and persistence boundary separately in technical notes. An endpoint invocation alone does
+not prove a user action or successful business outcome.
+
+Review every domain note as a nontechnical reader: can they understand the rule, conditions
+and result without an explanation of APIs, classes or databases? If not, rewrite the business
+statement and relocate implementation details. When updating a touched existing domain topic,
+separate already mixed content using allowed sources and retain the technical facts elsewhere.
+These instructions do not automatically rewrite published notes or relax inbox-only sourcing.
+
+### Check completeness within each audience
 
 Before marking input processed or publishing, compare output against the source ledger, not
 only against the draft itself. Ask: which rule, guard, exception, competing position, outcome

@@ -31,6 +31,11 @@ relationships matter, not a target number of links.
    Explain the concrete dependency, shared rule, causal connection or contrasting assumption.
    Do not imply that a personal idea is implemented merely because it links to factual
    documentation. Generic "related" explanations fail this check.
+   If either endpoint is a domain note, use a business-language explanation understandable to
+   a nontechnical user in both directions. Never insert class names, REST paths, schemas or
+   transport details through Connections. The script uses neutral technical-reference labels
+   on the domain side. Do not rewrite existing substantive text; cleaning an already mixed
+   domain note is a documentation update, not the linking skill's responsibility.
 5. Prepare only the relation JSON from the protocol, including exact hashes of both endpoints.
    Run `link`. It appends reciprocal Connections entries, skips existing semantic connections,
    and cannot replace the substantive note text. Do not manually rewrite notes, remove links,

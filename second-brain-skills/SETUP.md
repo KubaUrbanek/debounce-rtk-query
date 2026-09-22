@@ -1,5 +1,9 @@
 # Second Brain v2
 
+Start with the [skill guide](SKILLS-GUIDE.md) and [copyable example prompts](PROMPTS.md).
+The [agreed repository synchronization replacement](docs/repository-sync-design.md) is
+documented separately and is not implemented in this package yet.
+
 Six independent OpenCode skills. Ongoing workflows use one agent. Initial
 repository analysis delegates exploration and independent review to subagents, with at most
 `max_parallel_agents` active workers (default 4). User interaction is Polish; all generated
@@ -101,6 +105,15 @@ before any other writer. Recovery rolls back the unfinished operation; external 
 recovery for your decision. Regenerate the plan from current sources after recovery.
 
 ## Behavior
+
+Domain notes in knowledge/domain/ are documentation for nontechnical users: roles, processes,
+conditions, business rules, visible outcomes and exceptions. Implementation details such as
+REST calls, classes and database structures belong in technical notes. The bootstrap still
+traces code end to end internally; it translates established behavior into business language.
+See templates/domain-topic.md for the intended audience and structure. Optional links to
+technical notes remain neutral and do not require the reader to understand the implementation.
+Inbox distillation preserves this separation when updating topics. Installing this version
+does not automatically rewrite already generated notes; the linking skill only adds links.
 
 System reports use MR merge dates in Europe/Warsaw, not commit dates. They include all
 develop-prefixed target branches and summarize cumulative outcomes with MR links, without

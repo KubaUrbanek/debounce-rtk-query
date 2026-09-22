@@ -106,7 +106,12 @@ script run are necessary but insufficient: rich evidence-grounded topic document
    preserve facts about other projects. Read and supplement other active project notes only
    with observations established by this snapshot (for example caller-side contracts), and link
    the corresponding integration notes. An observed request does not prove receiver behavior.
-5. Place domain topics in `knowledge/domain/`; technical implementation in
+5. Place domain topics in `knowledge/domain/` and write them for a nontechnical user: roles,
+   requirements, business rules, visible outcomes and exceptions, without API/class/database
+   details. Split mixed findings before submission: domain describes behavior; technical
+   describes implementation. Trace entry points and call chains internally, then publish their
+   mechanics only in technical notes. Review must reject implementation-heavy domain prose.
+   Place technical implementation in
    `knowledge/technical/REPO_ID/`. Use `knowledge/technical/shared/` only for supported common
    principles. Keep database topics separate in `knowledge/technical/REPO_ID/database/`:
    SQL schemas, relationships, indexes and migrations; NoSQL documents, containers, partition

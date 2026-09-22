@@ -498,6 +498,8 @@ class Bootstrap:
                 if f['chunk_id'] not in docs[path]['evidence_chunks']: brain.fail('Document lacks finding evidence')
                 if f['kind']=='domain' and not path.startswith('knowledge/domain/'):
                     brain.fail('Domain findings require domain documentation')
+                if f['kind'] in ('technical','database','integration','architecture') and path.startswith('knowledge/domain/'):
+                    brain.fail('Implementation findings belong in technical/architecture documentation, not domain prose')
                 if f['kind']=='database' and docs[path].get('kind')!='database':
                     brain.fail('Database findings require a database document')
             elif item.get('disposition') in ('duplicate','superseded'):

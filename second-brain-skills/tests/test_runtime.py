@@ -105,6 +105,15 @@ class RuntimeTests(unittest.TestCase):
         with patch.object(Path,'read_text',guarded):
             b.graph(self.root); b.validate(self.root); b.inventory(self.c,'knowledge')
 
+    def test_domain_backlinks_have_nontechnical_labels(self):
+        domain=self.root/'knowledge/domain/approval.md'
+        technical=self.root/'knowledge/technical/one/ApprovalController.md'
+        b.atomic(domain,'# Approval\n')
+        b.atomic(technical,'# Controller\n\n[Approval](../../domain/approval.md)\n')
+        b.graph(self.root)
+        self.assertIn('[Technical reference]',domain.read_text())
+        self.assertNotIn('[ApprovalController]',domain.read_text())
+
     def test_restore_preserves_identity_and_rewrites_links(self):
         src=self.root/'archive/2026-09-18-system.md'
         b.atomic(src,'# Original report\n')

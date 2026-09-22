@@ -32,8 +32,13 @@ Automated tests reject unplanned submissions, lost findings, guide-only findings
 excerpts, mismatched areas and single-file review approval. Task-queue acceptance also requires
 more tasks than slots, shared dependency reads, fresh worker identities and complete flow mapping.
 Existing workflow tests remain; see the release verification for actual test results.
-The current suite passes 54 tests, including seven queued tasks with four worker slots,
+The current suite passes 56 tests, including seven queued tasks with four worker slots,
 failed-worker replacement, shared findings, explicit corrections and flow-evidence retention.
+Domain audience checks additionally reject routing a technical finding into domain notes and
+verify neutral labels for generated technical backlinks. Domain prose targets nontechnical
+users; code-level tracing remains in internal evidence and technical documentation. These
+mechanical checks cannot decide whether a sentence is understandable: substantive audience
+review remains mandatory. Installing the package does not rewrite existing mixed documents.
 Manual semantic acceptance requires tracing complete business and technical flows through a
 representative repository; the user's private project is unavailable here. Schemas cannot
 prove comprehension, adequate decomposition or honest evidence. No line-count or word-count

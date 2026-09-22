@@ -186,7 +186,7 @@ def link(root, plan):
             # Semantic links are distinct from automatically generated graph backlinks.
             if target in set(brain.targets(source, content)): continue
             marker = '<!-- thought-connections:end -->'
-            entry = '- ['+target.stem.replace('[','').replace(']','')+']('+brain.rel_link(source,target)+') — '+reason+'\n'
+            entry = '- ['+brain.link_label(root,source,target)+']('+brain.rel_link(source,target)+') — '+reason+'\n'
             if marker not in content:
                 content += '\n<!-- thought-connections:start -->\n## Connections\n\n'+marker+'\n'
             content = content.replace(marker, entry+marker)

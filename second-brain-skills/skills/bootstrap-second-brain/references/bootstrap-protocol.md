@@ -2,6 +2,14 @@
 
 ## Mandatory depth upgrade
 
+Domain findings and their published excerpts must describe business meaning for nontechnical
+users. Split mixed observations before submission: an implemented business rule is a domain
+finding, its controller/call/database mechanism is a separate technical or database finding.
+Implementation-kind findings cannot map to domain notes. The runtime checks destination kinds;
+the independent reviewer must check language, examples and absence of implementation detail.
+Do not relabel technical observations as domain to bypass this boundary. Internal source IDs,
+entry-point traces and detailed technical evidence remain required outside domain prose.
+
 The schemas below for the original draft/review are skeletons. The additional fields in this
 section are mandatory for every new stage and approval, including resumed old runs.
 

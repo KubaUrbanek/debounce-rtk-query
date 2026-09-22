@@ -255,6 +255,13 @@ def targets(p, text):
 
 def rel_link(source, target): return quote(os.path.relpath(target, source.parent), safe='/.-_')
 
+def link_label(root, source, target):
+    if source.is_relative_to(root/'knowledge/domain'):
+        if target.is_relative_to(root/'knowledge/technical'): return 'Technical reference'
+        if target.is_relative_to(root/'architecture'): return 'Architecture reference'
+        if any(target.is_relative_to(root/d) for d in ('inbox','archive')): return 'Source material'
+    return target.stem.replace('[','').replace(']','')
+
 def graph(root, writer=None):
     """Never open archive content. Backlink sections are excluded from content hashes."""
     writer = writer or atomic
@@ -267,7 +274,7 @@ def graph(root, writer=None):
         for t in targets(p, text):
             if t in adjacency and t != p: adjacency[p].add(t); adjacency[t].add(p)
     for p in files:
-        links = ''.join(f'- [{t.stem}]({rel_link(p,t)})\n' for t in sorted(adjacency[p]))
+        links = ''.join(f'- [{link_label(root,p,t)}]({rel_link(p,t)})\n' for t in sorted(adjacency[p]))
         writer(p, texts[p] + '\n<!-- brain-links:start -->\n## Related\n\n' + links + '<!-- brain-links:end -->\n')
 
 def validate(root):

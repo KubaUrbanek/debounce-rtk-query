@@ -96,6 +96,14 @@ class BootstrapTests(unittest.TestCase):
         p=self.plan(); p['finding_dispositions'][0]['excerpt']='Not present in the actual document'
         with self.assertRaisesRegex(ValueError,'exact excerpt'): self.b.stage(p)
 
+    def test_technical_finding_cannot_be_published_as_domain(self):
+        self.analyze(); p=self.plan()
+        d=copy.deepcopy(p['documents'][1]); d['path']='knowledge/domain/approval.md'; d['kind']='domain'
+        p['documents'].append(d)
+        finding=next(k for k,f in self.b.findings(self.b.load()).items() if f['kind']=='technical')
+        next(x for x in p['finding_dispositions'] if x['finding_id']==finding)['document_path']=d['path']
+        with self.assertRaisesRegex(ValueError,'Implementation findings'): self.b.stage(p)
+
     def test_unplanned_analysis_and_unaccounted_area_rejected(self):
         self.b.claim('explorer','explorer'); c=self.b.load()['chunks'][0]
         r=self.b.read('explorer',c['id'])

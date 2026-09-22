@@ -1,5 +1,10 @@
 # Runtime protocol
 
+Domain output under knowledge/domain/ is for nontechnical users. Preserve business rules,
+conditions and outcomes, while routing class names, REST calls, transport and storage internals
+to technical notes. Technical/source links on domain pages use neutral labels. This audience
+separation changes presentation, not the allowed evidence sources or the requirement for detail.
+
 The six skills contain identical copies of this versioned brain runtime; each can run
 independently. The bootstrap skill additionally contains its own snapshot/coverage runtime
 and publication protocol. Thought refinement and linking use their additional thoughts runtime.
