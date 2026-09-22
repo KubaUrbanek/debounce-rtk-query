@@ -212,12 +212,16 @@ class Bootstrap:
                 'max_parallel_agents':self.config.get('max_parallel_agents',4),
                 'files':s['files'],'pending_chunks':pending,'completed_chunks':len(s['results']),
                 'workers':s['workers'],'draft_hash':s.get('draft_hash'),
+                'tasks':s.get('tasks',{}),
                 'review':s['review'],'state_file':str(self.state_path)}
 
     def claim(self, worker, role):
         s=self.load(); self.editable(s); nonempty(worker,'worker')
         if role not in ('explorer','reviewer'): brain.fail('Invalid role')
         previous=s['workers'].get(worker)
+        if previous and previous.get('retired'): brain.fail('Spawn a fresh agent for the next task')
+        if any(t.get('worker')==worker and t['status']=='completed' for t in s.get('tasks',{}).values()):
+            brain.fail('Completed task workers are retired; spawn a fresh agent')
         if previous and previous['role'] != role: brain.fail('Reviewer must be a different agent, never an explorer')
         if not previous or not previous['active']:
             if sum(w['active'] for w in s['workers'].values()) >= self.config.get('max_parallel_agents',4):
@@ -232,7 +236,13 @@ class Bootstrap:
 
     def release(self, worker):
         s=self.load(); self.editable(s)
-        self.worker(s,worker); s['workers'][worker]['active']=False; self.save(s)
+        self.worker(s,worker); s['workers'][worker]['active']=False
+        for t in s.get('tasks',{}).values():
+            if t.get('worker')==worker and t['status']=='running':
+                t.setdefault('attempts',[]).append(worker)
+                t['status']='pending'; t.pop('worker',None)
+                s['workers'][worker]['retired']=True
+        self.save(s)
         return {'released':worker}
 
     def read(self,worker,chunk):
@@ -259,6 +269,9 @@ class Bootstrap:
     def refresh_manifest(self,s):
         s['manifest_hash']=sha(canonical({'files':s['files'],'chunks':s['chunks']}).encode())
         s['draft']=None; s['review']=None; s.pop('draft_hash',None)
+        for task in s.get('tasks',{}).values():
+            if task['status']=='completed':
+                task['status']='pending'; task.pop('worker',None); task.pop('result',None)
 
     def split(self,chunk,size):
         s=self.load(); self.editable(s)
@@ -296,8 +309,6 @@ class Bootstrap:
         if chunk not in {c['id'] for c in s['chunks']}: brain.fail('Unknown chunk')
         if not result.get('receipt') or s['reads'].get(worker,{}).get(chunk)!=result['receipt']:
             brain.fail('A matching read receipt is required before submission')
-        if chunk in s['results'] and s['results'][chunk]['worker']!=worker:
-            brain.fail('Another explorer owns the submitted findings; ask its owner to revise, do not overwrite')
         findings=result.get('findings',[])
         if not isinstance(findings,list): brain.fail('findings must be a list')
         for f in findings:
@@ -305,6 +316,14 @@ class Bootstrap:
                 brain.fail('Unknown finding kind')
             nonempty(f.get('text'),'finding text')
         if not findings: nonempty(result.get('no_knowledge_reason'),'no_knowledge_reason')
+        previous=s['results'].get(chunk)
+        if previous:
+            # Shared dependencies appear in multiple entry-point flows. Preserve old IDs;
+            # append new observations rather than requiring a retired agent to return.
+            combined=list(previous.get('findings',[]))
+            for finding in findings:
+                if finding not in combined: combined.append(finding)
+            result=dict(result,findings=combined)
         s['results'][chunk]=dict(result,worker=worker)
         s['draft']=None; s['review']=None; s.pop('draft_hash',None)
         self.save(s); return {'recorded':chunk}
@@ -399,11 +418,70 @@ class Bootstrap:
         if set(assigned)!=included or len(assigned)!=len(included):
             brain.fail('Assign each included file one primary area; dependencies may be read across areas')
         nonempty(plan.get('cross_area_strategy'),'cross_area_strategy')
+        tasks=plan.get('tasks',[])
+        if not tasks: brain.fail('Entry-point flow and residual task queue required')
+        queue={}; task_files=set()
+        for t in tasks:
+            nonempty(t.get('id'),'task id')
+            if t['id'] in queue: brain.fail('Duplicate task id')
+            if not t.get('files') or not set(t['files'])<=included: brain.fail('Task requires included files')
+            task_files.update(t['files'])
+            if t.get('kind')=='flow':
+                ep=t.get('entry_point',{})
+                if ep.get('path') not in t['files']: brain.fail('Entry point path must belong to task files')
+                for key in ('symbol','trigger'): nonempty(ep.get(key),'entry point '+key)
+            elif t.get('kind')=='residual': nonempty(t.get('reason'),'residual task reason')
+            else: brain.fail('Task kind must be flow or residual')
+            old=s.get('tasks',{}).get(t['id'])
+            if old and old['spec']==t: queue[t['id']]=old
+            else:
+                if old and old['status']=='running': brain.fail('Release running task before changing its specification')
+                queue[t['id']]={'spec':t,'status':'pending'}
+        if task_files!=included: brain.fail('Flow and residual tasks together must cover all included files')
+        if any(t['status']=='running' and k not in queue for k,t in s.get('tasks',{}).items()):
+            brain.fail('Cannot remove running task')
+        s['tasks']=queue
         s['analysis_plan']=plan; s['draft']=None; s['review']=None; s.pop('draft_hash',None)
         self.save(s)
-        return {'areas':len(areas),'assigned_files':len(assigned)}
+        return {'areas':len(areas),'assigned_files':len(assigned),'tasks':len(queue)}
+
+    def task_start(self,task,worker):
+        s=self.load(); self.editable(s); self.worker(s,worker,'explorer')
+        t=s.get('tasks',{}).get(task)
+        if not t or t['status']!='pending': brain.fail('Select a pending task')
+        if any(x.get('worker')==worker for x in s['tasks'].values()):
+            brain.fail('Use a fresh worker identity for each task')
+        t.update(status='running',worker=worker)
+        self.save(s); return t
+
+    def task_finish(self,task,worker,result):
+        s=self.load(); self.editable(s); self.worker(s,worker,'explorer')
+        t=s.get('tasks',{}).get(task)
+        if not t or t['status']!='running' or t.get('worker')!=worker: brain.fail('Task is not owned by this active worker')
+        nonempty(result.get('summary'),'task summary')
+        self.evidence(s,result.get('evidence_chunks'))
+        if not set(result['evidence_chunks'])<=set(s['reads'].get(worker,{})):
+            brain.fail('Task evidence must be read by its own worker')
+        required={c['id'] for c in s['chunks'] if c['path'] in t['spec']['files']}
+        if not required<=set(result['evidence_chunks']): brain.fail('Task must account for all ranges of its assigned files')
+        if t['spec']['kind']=='flow': nonempty(result.get('flow_id'),'flow_id')
+        t.update(status='completed',result=result)
+        s['workers'][worker]['active']=False
+        s['workers'][worker]['retired']=True
+        s['draft']=None; s['review']=None; s.pop('draft_hash',None)
+        self.save(s)
+        return {'completed':task,'retired_worker':worker,'action':'End actual subagent; spawn fresh worker for next pending task'}
 
     def depth_checks(self,s,plan,flow_ids):
+        tasks=s.get('tasks',{})
+        if not tasks or any(t['status']!='completed' for t in tasks.values()): brain.fail('Finish all queued exploration tasks before staging')
+        for t in tasks.values():
+            if t['spec']['kind']=='flow' and t['result']['flow_id'] not in flow_ids:
+                brain.fail('A completed entry-point task is missing its published flow')
+            if t['spec']['kind']=='flow':
+                flow=next(f for f in plan['flows'] if f['id']==t['result']['flow_id'])
+                if not set(t['result']['evidence_chunks'])<=set(flow['evidence_chunks']):
+                    brain.fail('Published flow loses evidence from its entry-point task')
         docs={d['path']:d for d in plan['documents']}
         findings=self.findings(s)
         dispositions=plan.get('finding_dispositions',[])
@@ -422,12 +500,12 @@ class Bootstrap:
                     brain.fail('Domain findings require domain documentation')
                 if f['kind']=='database' and docs[path].get('kind')!='database':
                     brain.fail('Database findings require a database document')
-            elif item.get('disposition')=='duplicate':
-                target=item.get('duplicate_of')
+            elif item.get('disposition') in ('duplicate','superseded'):
+                target=item.get('duplicate_of') if item['disposition']=='duplicate' else item.get('replaced_by')
                 canonical_item=disposition_by_id.get(target,{})
                 if target==item['finding_id'] or canonical_item.get('disposition')!='documented':
-                    brain.fail('Duplicate must point directly to a documented finding')
-                nonempty(item.get('reason'),'duplicate explanation')
+                    brain.fail('Duplicate/correction must point directly to a documented finding')
+                nonempty(item.get('reason'),'duplicate/correction explanation')
             elif item.get('disposition')=='omitted':
                 if f['kind']!='documentation': brain.fail('Behavioral/technical findings cannot be silently omitted')
                 nonempty(item.get('reason'),'documentation-only omission explanation')
@@ -453,25 +531,6 @@ class Bootstrap:
             if not set(a.get('flow_ids',[]))<=flow_ids: brain.fail('Unknown area flow')
             if not a.get('flow_ids'): nonempty(a.get('no_flows_reason'),'area no_flows_reason')
         if covered!=included: brain.fail('Area dossiers omit included files')
-
-    def repair(self,reason):
-        s=self.load(); nonempty(reason,'repair reason')
-        if s['status']!='completed': brain.fail('Repair is only for a completed bootstrap; otherwise resume')
-        if self.journal.exists() or (self.root/'.state/thoughts-publishing.json').exists():
-            brain.fail('Recover interrupted publication first')
-        for other in (self.root/'.state/bootstrap').glob('*/state.json'):
-            if other!=self.state_path and json.loads(other.read_text())['status']!='completed':
-                brain.fail('Only one repository initialization or repair at a time')
-        # Verify the original snapshot still exists; never replace it with current remote code.
-        self.git('cat-file','-e',s['commit']+'^{commit}')
-        backup=self.home/'history'/('before-repair-'+secrets.token_hex(8)+'.json')
-        write_json(backup,s)
-        s.update(status='analyzing',results={},reads={},workers={},draft=None,review=None)
-        s.pop('analysis_plan',None)
-        for key in ('draft_hash','baseline','published_draft_hash','completed_at'): s.pop(key,None)
-        s.setdefault('events',[]).append({'event':'repair','reason':reason,'at':stamp(),'backup':str(backup)})
-        self.save(s)
-        return self.status()
 
     def stage(self,plan):
         s=self.load(); self.editable(s); self.coverage(s)
@@ -579,8 +638,11 @@ def main():
     sub=p.add_subparsers(dest='command',required=True)
     cmd=sub.add_parser('prepare'); cmd.add_argument('--branch',required=True)
     sub.add_parser('status'); sub.add_parser('findings')
-    cmd=sub.add_parser('repair'); cmd.add_argument('--reason',required=True)
     cmd=sub.add_parser('organize'); cmd.add_argument('--plan',required=True)
+    sub.add_parser('tasks')
+    for name in ('task-start','task-finish'):
+        cmd=sub.add_parser(name); cmd.add_argument('--task',required=True); cmd.add_argument('--worker',required=True)
+        if name=='task-finish': cmd.add_argument('--result',required=True)
     cmd=sub.add_parser('claim'); cmd.add_argument('--worker',required=True); cmd.add_argument('--role',choices=['explorer','reviewer'],required=True)
     cmd=sub.add_parser('read'); cmd.add_argument('--worker',required=True); cmd.add_argument('--chunk',required=True)
     cmd=sub.add_parser('submit'); cmd.add_argument('--worker',required=True); cmd.add_argument('--result',required=True)
@@ -594,8 +656,10 @@ def main():
     a=p.parse_args(); c=brain.config(a.config); boot=Bootstrap(c,a.repo)
     with brain.lock(boot.root):
         if a.command=='prepare': result=boot.prepare(a.branch)
-        elif a.command=='repair': result=boot.repair(a.reason)
         elif a.command=='organize': result=boot.organize(json.loads(Path(a.plan).read_text()))
+        elif a.command=='tasks': result=boot.load().get('tasks',{})
+        elif a.command=='task-start': result=boot.task_start(a.task,a.worker)
+        elif a.command=='task-finish': result=boot.task_finish(a.task,a.worker,json.loads(Path(a.result).read_text()))
         elif a.command=='findings': result=boot.findings(boot.load())
         elif a.command=='claim': result=boot.claim(a.worker,a.role)
         elif a.command=='read': result=boot.read(a.worker,a.chunk)

@@ -19,6 +19,9 @@ with this version. Copy config.example.yaml to ~/.config/second-brain/config.yam
 then edit the fixed fields. brain_dir is the root of your second brain. Configure exact
 author email addresses, stable repository IDs, paths, GitLab hosts/projects and remotes.
 Set `max_parallel_agents` to a positive integer; omitting it preserves the default of 4.
+This limits active workers only. Bootstrap may plan dozens of tasks: when a worker completes
+its task, its result is saved, the worker is closed, and a fresh subagent takes the next task.
+It does not divide the whole repository into four fixed assignments.
 
 Only the demonstrated YAML subset is supported: fixed fields, scalar strings and lists,
 two/four-space indentation. Full-line comments are allowed; aliases, tags, inline comments
@@ -122,6 +125,14 @@ or dependency files are excluded. No project code, build, commit history or live
 used. Code wins over contradictory prose and existing facts about the analyzed project;
 other projects' variants are preserved. Later changes are handled through the inbox workflow.
 
+Bootstrap discovery starts from real execution entry points: endpoints, message/Kafka consumers,
+cron/scheduled jobs, batch, CLI and startup hooks. Each queued flow investigation traces behavior
+end to end through domain guards, persistence, integration and failure paths. Shared dependencies
+may belong to multiple flow investigations. Configuration, migrations, library APIs and documents
+without a discovered entry point receive explicit residual tasks; they are not skipped.
+Discovery examines registrations and wiring as well as source declarations. Areas organize file
+accountability and documentation; the number of flow tasks is independent of the worker limit.
+
 The bootstrap script accounts for every included file and character range. Subagents supply
 findings; the coordinator synthesizes useful linked concepts and cross-file flows; a fresh
 reviewer checks the exact staged draft. Publication waits for complete coverage and approved
@@ -140,23 +151,25 @@ Invalid dates remain in inbox. A note without durable knowledge can be marked do
 creating a topic. Backlinks are generated for active notes; archive content is never read
 or rewritten. System reports may be restored by known filename for a requested rerun.
 
-## Repairing shallow bootstrap documentation
+## Fresh bootstrap and interrupted runs
 
-Install this updated package with `bash install.sh`; your YAML is preserved. Existing completed
-runs can now be explicitly repaired. In OpenCode ask:
+Install this updated package with `bash install.sh`; your YAML is preserved. There is no repair
+mode. The user handles any cleanup before requesting a fresh bootstrap for a selected repository.
+The skill does not automatically erase existing knowledge or completed state. Retained completed
+state blocks a second initialization. Do not erase unrelated repositories or shared knowledge.
+In OpenCode ask:
 
-> Use bootstrap-second-brain to repair the completed initialization for repository REPO_ID.
-> Keep its original pinned snapshot. Plan by coherent functional areas, reanalyze full flows,
-> enrich existing domain and technical notes, and require the new independent depth review.
+> Use bootstrap-second-brain to initialize repository REPO_ID from remote branch BRANCH.
+> Discover entry points and queue end-to-end flow tasks plus explicit residual work.
+> Use fresh workers with at most four running concurrently, preserve detailed domain and
+> technical findings, and require independent review before publishing.
 
-Do not delete state or run a second initialization under a different repository ID. The `repair`
-command backs up previous state, clears prior analysis receipts/results, and keeps active notes
-until the replacement passes all gates. For a merely interrupted run, resume normally instead.
-Repair does not update the snapshot to today's remote branch. Preserve later knowledge already
-learned from inbox updates; ask about conflicting chronology rather than reverting it.
+For a merely interrupted run, resume its existing pinned snapshot normally instead of starting
+again. The state and durable task results preserve progress across context limits and failures.
 
 See [analysis upgrade and acceptance](docs/analysis-upgrade.md). This version requires functional
-planning and finding-to-document mappings in bootstrap plans; older staged plans must be expanded
+planning, entry-flow/residual task completion and finding-to-document mappings in bootstrap plans;
+older staged plans must be expanded
 and reviewed again. Other workflows keep their existing publication JSON shape.
 
 ## Verification details

@@ -11,10 +11,18 @@ be augmented; archive is not read. No commit history or live database queries ar
 Documentation in the repository is included, but implemented code wins contradictory prose.
 
 Use common automatic exclusions for tests, generated content, dependencies and build artifacts.
-Every included file is chunked with complete character/line coverage. Actual subagents analyze
-assigned chunks, recording findings or concrete no-knowledge explanations. A coordinator
-resolves cross-file flows and publishes only meaningful concepts. The configurable parallel
-limit defaults to four; only bootstrap uses this delegation workflow.
+Every included file is chunked with complete character/line coverage. Discovery starts from
+actual endpoint, message listener, cron/job, CLI and startup entry points and their registration.
+Actual subagents analyze queued end-to-end flows, recording findings or concrete no-knowledge
+explanations. Tasks may share files; areas retain file accountability. Residual tasks cover
+included sources without a discovered trigger, including configuration, migrations and documents.
+A coordinator resolves cross-flow contracts and publishes meaningful detailed concepts.
+The configurable limit defaults to four active workers, not four tasks. Persist each completed
+task, close its worker and start the next task with a fresh identity/context. Only bootstrap
+uses this delegation workflow; all other five skills retain their source and one-agent rules.
+All tasks must finish and each flow task must link to a publication flow before staging.
+There is no repair mode. Existing completed state blocks another initialization; the user handles
+cleanup before fresh bootstrap. Interrupted runs resume the pinned snapshot without cleanup.
 
 Domain knowledge is shared with explicitly scoped project variants. Technical knowledge is
 per project unless a shared principle is supported. SQL and NoSQL have a dedicated per-project
@@ -41,7 +49,7 @@ Unknown externally controlled runtime values are documented limitations, not ana
 
 Technical state stays in `.state/bootstrap/REPO_ID/` as JSON and pinned Git objects. User-facing
 notes are linked English Markdown. Interaction is Polish. No third-party Python dependencies,
-project execution, automatic Git commit or push. Existing three skills retain their own
+project execution, automatic Git commit or push. Existing five skills retain their own
 collection scope, inbox workflow and human conflict decisions, but use the same dedicated
 database documentation structure.
 

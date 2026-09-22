@@ -42,6 +42,16 @@ These results do not certify LLM comprehension or live workplace integration.
 | Draft changes after approval | Prior approval invalid; new exact hash must be reviewed |
 | Reviewer reports a missing flow | Correct analysis and draft before publication; no partial output |
 | Fifth worker when configured maximum is four | Worker claim rejected until an active slot is released |
+| Repository has 23 entry flows and a four-worker limit | Plan retains all 23 tasks; at most four workers run concurrently |
+| One worker completes before the others | Its durable task result releases the slot; close it and spawn a fresh agent for the next task |
+| HTTP, Kafka and cron entry points call the same service | Separate triggered flow tasks may share files and evidence; preserve distinct conditions and reconcile common behavior |
+| Entry point is registered through configuration instead of an annotation | Discovery examines registration/wiring and includes the actual trigger |
+| Included migration or library file has no discovered trigger | Justified residual task analyzes it; no coverage exclusion is inferred |
+| Worker reads a dependency outside its initial file list | Allowed inside the pinned repository; include the dependency evidence in its result |
+| Finished flow task is absent from staged publication flows | Staging fails until the result's flow ID is represented |
+| A task is pending despite complete chunk receipts | Staging remains blocked; read coverage does not replace task completion |
+| An ongoing inbox/daily/thought/link skill uses the shared depth contract | Its original source restrictions and single-agent workflow still apply |
+| User requests repair of completed state | Explain that no repair mode exists; never delete user state or knowledge automatically |
 | Transient command failure | Bounded retries; work retained |
 | Persistent authentication/read failure | Block, explain in Polish, wait for human reaction, resume pinned run |
 | Existing note changes after draft staging | Optimistic update fails; reread, merge and obtain fresh review |

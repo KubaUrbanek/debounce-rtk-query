@@ -4,8 +4,7 @@ description: Initialize linked domain, project technical, SQL/NoSQL and proposed
 ---
 # Bootstrap repository knowledge
 
-Use this fourth independent skill for the first initialization of one configured repository
-or an explicitly requested repair of inadequate completed bootstrap documentation.
+Use this fourth independent skill for initialization of one configured repository.
 For later change reports or inbox distillation, use the corresponding existing skills.
 Speak Polish to the user; write all generated documents in English Markdown.
 Linux, Python 3.11+ standard library, Git and configured authentication; no pip libraries.
@@ -20,13 +19,10 @@ script run are necessary but insufficient: rich evidence-grounded topic document
 
 - Exactly one configured repository and one user-selected remote branch per initialization.
   Preserve its pinned snapshot through all retries and resumes. A successfully initialized
-  repository cannot be initialized again, including with a different branch. For an explicitly
-  requested quality repair use the protocol's `repair` command: preserve the pinned SHA,
-  completion audit and existing documents, and reanalyze under the current quality contract.
-  Do not delete state, reset completion markers manually or fetch a replacement snapshot.
-  During repair, preserve newer sourced knowledge learned after the pinned snapshot. Scope old
-  behavior historically instead of overwriting current facts; ask about uncertain chronology.
-  This temporal rule takes precedence over the general code-wins rule below.
+  repository with retained completed state cannot be initialized again, including with a
+  different branch. A user who wants a fresh bootstrap handles cleanup beforehand; there is
+  no repair mode and the skill never deletes completed state or existing notes automatically.
+  Do not recommend erasing the whole second brain or other repositories' shared knowledge.
 - Read production code, configuration, migrations, scripts, CI/CD and repository documents.
   Apply the script's common automatic exclusions for tests, generated files, dependencies and
   build outputs. Keep ambiguous files included. Never execute project code, builds or scripts.
@@ -40,24 +36,44 @@ script run are necessary but insufficient: rich evidence-grounded topic document
 ## Analysis and synthesis
 
 1. Prepare or resume the pinned snapshot. Inspect status, exclusions and all outstanding chunks.
-   Before delegating, perform coordinator reconnaissance of the pinned tree and representative
-   entry points/configuration/dependency wiring using the supported reader. Map domain modules,
-   entry points, persistence ownership and integration boundaries. Save a planning JSON under
-   `.state/` with areas, responsible explorer, owned file paths, key questions, dependency areas,
-   expected flows and output topics. This is an analysis plan, not a claim of completed coverage.
+   Begin discovery with actual execution entry points: HTTP/GraphQL endpoints, Kafka/message
+   listeners, scheduled/cron jobs, batch jobs, CLI commands and startup hooks where present.
+   Inspect framework configuration, route/consumer registration and dependency wiring as well
+   as declarations; search annotations alone is insufficient. Record each entry point's pinned
+   path, symbol and trigger. Follow calls from each entry through guards, domain transformations,
+   persistence and outbound effects, including failure, retry and alternative branches.
+   Map domain modules, persistence ownership and integration boundaries from these flows.
+   Save a planning JSON under `.state/` with `areas` for file coverage accounting and `tasks`
+   for semantic exploration. Flow tasks identify an `entry_point` and initial `files`;
+   residual tasks justify code/configuration/migrations/documents not covered by entry flows.
+   This is an analysis plan, not a claim of completed coverage. Enumerate distinct entry flows;
+   do not silently omit triggers because a similar controller or listener was already studied.
    Register the coordinator as an explorer for reconnaissance reads and release its active slot
    before dispatching workers. Record the plan with `organize --plan PLAN_JSON` before submissions;
    a loose planning file alone does not satisfy the runtime gate. Use `findings` for stable IDs.
    Refine it as dependencies become clear. Do not hand out random files or equal-sized chunks.
-2. Delegate exploration to real subagents, capped by `max_parallel_agents` (default 4).
-   Register each actual agent identity. Each uses the chunk reader and submits evidence-based
+2. Delegate exploration from the task queue to real subagents. `max_parallel_agents` (default 4)
+   limits simultaneously active workers, NOT total tasks, areas or agents over the whole run.
+   Plan as many coherent entry-flow tasks as needed. For example 23 flows remain 23 tasks,
+   processed through up to four active slots; never force four repository partitions.
+   Register each actual fresh agent identity, then use `task-start --task TASK_ID --worker ID`.
+   Each uses the chunk reader and submits evidence-based
    findings or a specific no-knowledge reason for every assigned chunk. Only the coordinator
    writes the final draft; explorers write intermediate results under `.state/`.
-   Each assignment owns a coherent functional area and concrete questions about its behavior.
-   Let explorers read pinned dependencies outside their owned files and record cross-area
-   evidence; file ownership prevents omissions, it does not prohibit following call chains.
-   Only the primary owner submits or revises a chunk's findings; dependency readers send
-   additions to that owner. Never overwrite another explorer's results.
+   Each flow assignment supplies its concrete trigger, path/symbol, initial files, behavior
+   questions and expected end-to-end result. Files are starting points, not a read boundary.
+   Flow tasks may share services, repositories and chunks. Let explorers read pinned
+   dependencies and record cross-task evidence. Preserve previously submitted findings;
+   coordinate additions to shared chunks rather than overwriting another worker's results.
+   Persist full findings and a task result JSON with `summary`, `evidence_chunks` and (for flow
+   tasks) `flow_id`. Run `task-finish --task TASK_ID --worker ID --result RESULT_JSON` only after
+   evidence and the result are durable. This releases the registered slot. End/close that real
+   subagent using available orchestration, then spawn a fresh identity/context for the next
+   pending task. Do not merely rename or reuse an old worker context; registration alone does
+   not spawn or terminate actual agents. Use `tasks` to inspect pending/running/completed work.
+   Pass the new worker the relevant durable dossier and evidence references, not the entire
+   preceding worker conversation. Failed/interrupted work must remain pending or blocked,
+   never be falsely finished to free a slot. All queued tasks must finish before staging.
    Split an oversized area by meaningful subflows with an explicit interface contract, never
    by arbitrary line counts alone. Chunks are coverage/read units, not the delegation strategy.
    Use `split` for pending oversized chunks. For blocked binary repository documents, use a
@@ -66,13 +82,19 @@ script run are necessary but insufficient: rich evidence-grounded topic document
 3. Account for every included file and all its chunks, including large files. Reading receipts
    establish access to the complete material, not comprehension. Resolve cross-file flows:
    entry points, domain conditions, persistence, outbound calls/events and failure paths.
-   Partition the repository into coherent functional areas; persist an area dossier before
+   Entry-point tasks drive discovery; areas serve file accountability and synthesis. Persist
+   detailed flow dossiers, then organize them into coherent area dossiers before
    moving on. Every included file must belong to an area. Each dossier needs evidence-backed
    domain and technical assessments and links to the applicable flow IDs. Reconcile cross-area
    behavior explicitly. Do not use one repository-wide generic dossier as a compression shortcut.
    Run a dedicated integration-synthesis pass over the detailed dossiers and original evidence:
    connect caller/callee contracts, transaction boundaries, events, state changes and persistence
-   across areas. Resolve mismatches by reopening evidence and targeted explorer follow-up.
+   across areas. At an external boundary record the observed caller/producer contract; do not
+   pretend to have traced an unavailable service. For in-repository asynchronous consumers,
+   reconcile producer and consumer flow IDs and their contracts. Resolve mismatches by reopening
+   evidence and targeted explorer follow-up. Include residual analysis for migrations,
+   configuration, library APIs, documentation and other included sources lacking a discovered
+   trigger. Unreachable or unclassified does not mean excluded; coverage requirements remain.
    Preserve durable structured findings plus detailed per-area document drafts across context
    resets. The coordinator integrates these documents; it must not recompress them into a few
    global paragraphs. Keep source findings available through review and publication.
@@ -100,8 +122,12 @@ script run are necessary but insufficient: rich evidence-grounded topic document
    behavior and all review dimensions, and review the exact staged hash. Supply the protocol's
    `finding_dispositions` for every finding, with output path and exact supporting excerpt or
    a justified direct duplicate mapping. Only documentation-kind findings may be omitted with
-   a specific reason; behavioral and technical findings must be retained. Supply `area_dossiers`
-   covering all included file paths. A heading
+   an irrelevance reason. An incorrect prior finding may instead be explicitly superseded by
+   a documented correction with source-grounded reasoning, retained audit and independent review.
+   Valid behavioral and technical findings must be retained. Supply `area_dossiers`
+   covering all included file paths and publication flows for every completed flow task's ID.
+   The independent reviewer also checks entry-point discovery, omitted triggers, task results,
+   shared dependencies and residual coverage against the pinned sources. A heading
    or generic overview cannot stand in for a detailed finding. Preserve supported detail from
    existing notes. The reviewer must read at least one chunk of every included file, all chunks
    needed to verify each material behavior, and every proposed document. Its `document_checks`

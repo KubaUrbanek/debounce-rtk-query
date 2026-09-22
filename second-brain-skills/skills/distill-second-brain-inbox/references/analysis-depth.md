@@ -64,11 +64,18 @@ and retain their one-agent execution contract.
 
 ## Workflow-specific application
 
-- **Bootstrap:** every functional area gets a durable evidence dossier, then detailed topic
-  documentation. Coordinator reconnaissance first maps entry points, modules, persistence and
-  integrations, then records an explicit area/dependency/task plan. Assign coherent capabilities
-  or subflows, never arbitrary equal-sized chunks. Explorers follow dependencies outside their
-  owned areas within the same pinned snapshot. Chunk coverage accounts for all code; it does
+- **Bootstrap:** discover actual entry points first (endpoints, message/Kafka consumers, cron/
+  scheduled jobs, batch, CLI and startup hooks), including registration and configuration.
+  Queue one coherent end-to-end investigation per entry flow, recording its path, symbol and
+  trigger. Follow guards, state changes, persistence, integrations, failures and alternate paths.
+  Add justified residual tasks for included sources without a discovered trigger. Areas retain
+  file accountability and synthesis, not task boundaries; flow tasks can share files/dependencies.
+  Persist each flow's full evidence dossier, then detailed topic documentation. The task count
+  is independent of `max_parallel_agents`: default four is a concurrent worker limit only.
+  Finish a task durably, release/close its actual worker and spawn a fresh worker context for
+  the next queued task. No fixed four partitions and no carrying an ever-growing conversation
+  across unrelated jobs. These delegation instructions apply to bootstrap only.
+  Explorers follow dependencies within the same pinned snapshot. Chunk coverage accounts for all code; it does
   not define semantic task boundaries. A dedicated cross-area pass reconstructs end-to-end
   behavior from detailed dossiers and original evidence. Global synthesis reconciles shared
   concepts and end-to-end flows without

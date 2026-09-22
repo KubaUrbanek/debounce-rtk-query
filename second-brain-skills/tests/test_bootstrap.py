@@ -45,14 +45,18 @@ class BootstrapTests(unittest.TestCase):
     def analyze(self):
         self.b.organize({'areas':[{'id':'submission','files':[f['path'] for f in self.b.load()['files'] if f['status']=='included'],
             'purpose':'Submission and storage definitions','domain_questions':'What does submission return?',
-            'technical_questions':'What schema is defined?'}], 'cross_area_strategy':'Trace app to schema; do not invent a database call.'})
+            'technical_questions':'What schema is defined?'}], 'cross_area_strategy':'Trace app to schema; do not invent a database call.',
+            'tasks':[{'id':'submit-task','kind':'flow','entry_point':{'path':'src/app.py','symbol':'submit','trigger':'Function call'},
+                      'files':[f['path'] for f in self.b.load()['files'] if f['status']=='included']}]})
         self.b.claim('explorer', 'explorer')
+        self.b.task_start('submit-task','explorer')
         for chunk in self.b.status()['pending_chunks']:
             result = self.b.read('explorer', chunk['id'])
             kind = 'database' if chunk['path'].endswith('.sql') else 'technical'
             self.b.submit('explorer', {'chunk_id': chunk['id'], 'receipt': result['receipt'],
                                       'findings': [{'kind': kind, 'text': 'Fixture observation: '+chunk['path']}]})
-        self.b.release('explorer')
+        self.b.task_finish('submit-task','explorer',{'summary':'Submission returns accepted; schema defines order identity.',
+                          'flow_id':'submit','evidence_chunks':list(self.b.load()['results'])})
 
     def plan(self):
         s = self.b.load()
@@ -100,22 +104,72 @@ class BootstrapTests(unittest.TestCase):
         self.analyze(); p=self.plan(); p['area_dossiers'][0]['files'].pop()
         with self.assertRaises(ValueError): self.b.stage(p)
 
-    def test_repair_completed_keeps_snapshot_and_documents(self):
-        self.analyze(); self.b.stage(self.plan()); self.approve(); self.b.publish()
-        old=self.b.load()['commit']; text=(self.root/'knowledge/essence.md').read_text()
-        self.b.repair('Documentation too shallow')
-        self.assertEqual(old,self.b.load()['commit'])
-        self.assertEqual({},self.b.load()['results'])
-        self.assertTrue(list((self.b.home/'history').glob('before-repair-*.json')))
-        self.assertEqual(text,(self.root/'knowledge/essence.md').read_text())
-        with self.assertRaises(ValueError): self.b.publish()
-
     def test_review_sampling_one_file_cannot_approve(self):
         self.analyze(); self.b.stage(self.plan()); self.b.claim('independent','reviewer')
         self.b.read('independent',self.b.load()['chunks'][0]['id'])
         with self.assertRaisesRegex(ValueError,'every included file'):
             self.b.review('independent',{'draft_hash':self.b.load()['draft_hash'],'verdict':'approved',
                 'issues':[],'checks':{k:'Checked' for k in boot.CHECKS}})
+
+    def test_more_tasks_than_workers_and_fresh_worker_rotation(self):
+        self.analyze()
+        p=copy.deepcopy(self.b.load()['analysis_plan'])
+        p['tasks']=[dict(p['tasks'][0],id='task-'+str(i)) for i in range(7)]
+        self.b.organize(p)
+        self.b.config['max_parallel_agents']=4
+        for i in range(4):
+            self.b.claim('worker-'+str(i),'explorer'); self.b.task_start('task-'+str(i),'worker-'+str(i))
+        with self.assertRaises(ValueError): self.b.claim('fifth','explorer')
+        for i in range(7):
+            worker='worker-'+str(i)
+            if i>=4:
+                self.b.claim(worker,'explorer'); self.b.task_start('task-'+str(i),worker)
+            for c in self.b.load()['chunks']: self.b.read(worker,c['id'])
+            self.b.task_finish('task-'+str(i),worker,{'summary':'Trace checked','flow_id':'submit',
+                                                   'evidence_chunks':list(self.b.load()['results'])})
+        self.assertTrue(all(t['status']=='completed' for t in self.b.load()['tasks'].values()))
+        with self.assertRaises(ValueError): self.b.claim('worker-0','explorer')
+        self.b.stage(self.plan())
+
+    def test_released_failed_task_can_be_retried_by_fresh_worker(self):
+        self.analyze(); p=copy.deepcopy(self.b.load()['analysis_plan'])
+        p['tasks'][0]['id']='retry'; self.b.organize(p)
+        self.b.claim('failed','explorer'); self.b.task_start('retry','failed'); self.b.release('failed')
+        self.assertEqual('pending',self.b.load()['tasks']['retry']['status'])
+        self.b.claim('replacement','explorer'); self.b.task_start('retry','replacement')
+        with self.assertRaises(ValueError): self.b.claim('failed','explorer')
+        with self.assertRaises(ValueError): self.b.stage(self.plan())
+
+    def test_shared_dependency_findings_are_preserved(self):
+        self.analyze(); self.b.claim('dependency-reader','explorer')
+        c=self.b.load()['chunks'][0]; before=self.b.load()['results'][c['id']]['findings']
+        r=self.b.read('dependency-reader',c['id'])
+        self.b.submit('dependency-reader',{'chunk_id':c['id'],'receipt':r['receipt'],
+                     'findings':[{'kind':'technical','text':'Additional flow-specific observation'}]})
+        after=self.b.load()['results'][c['id']]['findings']
+        self.assertEqual(before,after[:-1])
+
+    def test_false_finding_can_be_superseded_without_publishing_it(self):
+        self.analyze(); self.b.claim('correction-reader','explorer')
+        c=next(c for c in self.b.load()['chunks'] if c['path']=='src/app.py')
+        r=self.b.read('correction-reader',c['id'])
+        self.b.submit('correction-reader',{'chunk_id':c['id'],'receipt':r['receipt'],
+            'findings':[{'kind':'technical','text':'Submission returns accepted without persisting.'}]})
+        plan=self.plan(); old=c['id']+':0'; new=c['id']+':1'
+        for d in plan['documents']: d['content']=d['content'].replace('Fixture observation: src/app.py','')
+        item=next(x for x in plan['finding_dispositions'] if x['finding_id']==old)
+        item.clear(); item.update(finding_id=old,disposition='superseded',replaced_by=new,
+                                 reason='Source shows a return value only; no database call.')
+        self.b.stage(plan)
+
+    def test_task_requires_own_full_reads_and_flow_in_output(self):
+        self.analyze(); p=copy.deepcopy(self.b.load()['analysis_plan']); p['tasks'][0]['id']='new'
+        self.b.organize(p); self.b.claim('fresh','explorer'); self.b.task_start('new','fresh')
+        with self.assertRaisesRegex(ValueError,'own worker'):
+            self.b.task_finish('new','fresh',{'summary':'Trace','flow_id':'submit','evidence_chunks':list(self.b.load()['results'])})
+        for c in self.b.load()['chunks']: self.b.read('fresh',c['id'])
+        self.b.task_finish('new','fresh',{'summary':'Trace','flow_id':'missing-flow','evidence_chunks':list(self.b.load()['results'])})
+        with self.assertRaisesRegex(ValueError,'missing its published flow'): self.b.stage(self.plan())
 
     def test_inventory_and_pinned_resume(self):
         s = self.b.status()

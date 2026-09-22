@@ -24,12 +24,22 @@ Example AREAS_JSON shape (replace every example with observed files and question
     "domain_questions": "Which states allow submission, by whom, and with which checks?",
     "technical_questions": "Where are transactions, writes and outbound events performed?"
   }],
-  "cross_area_strategy": "Reconcile submission with approval and event-consumer flows using shared identifiers and actual call contracts."
+  "cross_area_strategy": "Reconcile submission with approval and event-consumer flows using shared identifiers and actual call contracts.",
+  "tasks": [{
+    "id": "submit-order",
+    "kind": "flow",
+    "entry_point": {"path": "src/OrderService.java", "symbol": "submit", "trigger": "Actual configured invocation; identify route/listener/job where present"},
+    "files": ["src/OrderService.java"]
+  }]
 }
 ```
 
-Assign every included file one primary functional owner. Related dependencies may be read by
-multiple researchers. Do not allocate random or equal-sized chunk batches as semantic tasks.
+Assign every included file one primary area for bookkeeping, not exclusive research ownership.
+Create any number of end-to-end tasks rooted in actual discovered triggers. Tasks may overlap
+files and read dependencies outside their initial files. Flow plus residual task files must
+cover all included files. Residual tasks use `kind: residual`, `id`, `files` and a nonempty
+`reason` describing why no discovered entry flow covers them. Do not label executable behavior
+residual just to avoid tracing it. Do not allocate random or equal-sized chunks as semantic tasks.
 Reorganize when exploration discovers a better boundary or newly extracted files; organizing
 invalidates any staged draft/review. Save detailed per-area working notes in this run's state
 directory, not in active knowledge. Use stable finding IDs from `findings` (`chunk_id:index`,
@@ -62,6 +72,11 @@ detailed document with the finding's source chunk in evidence; essence.md cannot
 destination. Domain findings go to domain notes; database findings to database notes.
 For a true duplicate use `disposition: duplicate`, `duplicate_of: DOCUMENTED_FINDING_ID` and a
 specific `reason`; it must point directly to a documented item. Only documentation-kind findings
+may be omitted for irrelevance. For a demonstrably incorrect prior observation use
+`disposition: superseded`, `replaced_by: CORRECT_DOCUMENTED_FINDING_ID` and a source-grounded
+`reason`. Preserve the original finding in the audit; publish only the supported correction.
+The independent reviewer must check that evidence supports the correction. Do not use this
+mechanism to discard a distinct valid behavior. Only documentation-kind findings
 can be `omitted` with a specific reason (for example prose contradicted by code). Do not relabel
 behavioral findings as documentation to bypass retention. All dossiers must match planned
 primary files and include evidence for each file. Empty flow_ids requires no_flows_reason.
@@ -74,23 +89,45 @@ object mapping every exact document path to a concrete explanation of checks and
 Generic approvals are unacceptable even if they pass the schema. Return changes_requested
 when a dossier or document is too shallow; restage after corrections.
 
-## Repair a shallow completed run
-
-Use only when the user asks to repair an inadequate completed bootstrap:
+## Queue and fresh-worker scheduling
 
 ```bash
-bash SKILL_DIR/scripts/bootstrap.sh --config CONFIG --repo REPO_ID repair --reason "Completed documentation is too shallow"
+bash SKILL_DIR/scripts/bootstrap.sh --config CONFIG --repo REPO_ID tasks
+bash SKILL_DIR/scripts/bootstrap.sh --config CONFIG --repo REPO_ID claim --worker FRESH_AGENT_ID --role explorer
+bash SKILL_DIR/scripts/bootstrap.sh --config CONFIG --repo REPO_ID task-start --task TASK_ID --worker FRESH_AGENT_ID
+bash SKILL_DIR/scripts/bootstrap.sh --config CONFIG --repo REPO_ID task-finish --task TASK_ID --worker FRESH_AGENT_ID --result RESULT_JSON
 ```
 
-This preserves the pinned commit, snapshot and published notes, writes a backup of prior run
-state under the run's internal history/, and reopens analysis. Old receipts/findings/review are
-cleared from the active run so superficial evidence cannot simply be republished. Reorganize,
-reanalyze and independently review the original snapshot, then enrich existing notes with
-current hashes. Do not erase unrelated facts or changes learned after that snapshot: compare
-source dates, preserve later facts and ask the user when chronology is uncertain. Repair is
-not a rescan of today's branch and never fetches a replacement snapshot. Missing snapshot
-objects block repair. Normal prepare still refuses completed runs. Never edit completion flags
-or delete state to work around the guard.
+A task result contains `summary`, `evidence_chunks` and, for flow tasks, `flow_id` naming its
+corresponding publication flow. Include all assigned file ranges plus dependency ranges used
+in the end-to-end explanation. Results must have been read by that worker and accounted for
+in submitted findings. Document trigger/binding, preconditions, decision branches, calls,
+transaction boundaries, database reads/writes, messages, successful outcomes and failure/retry
+paths where present. Explicitly mark external boundaries and unresolved dynamic dispatch.
+Do not claim receiver internals without same-snapshot source evidence.
+
+`task-finish` requires coverage and retires the worker, freeing a slot. The coordinator must
+actually end that subagent before spawning a new one; the script cannot manage OpenCode agent
+lifecycles. At most max_parallel_agents actual workers may be alive concurrently. There is no
+task-count cap. Do not wait for all four workers to finish if one slot becomes available.
+The coordinator's lightweight reconnaissance registration should be released before dispatch.
+
+For a failed/interrupted worker, end it and run `release --worker ID`: running work returns
+to pending and must be claimed by a fresh worker. New workers reread necessary source ranges.
+Shared-chunk submissions append unique findings, preserving earlier finding IDs and evidence.
+If an earlier observation is incorrect, report the correction explicitly and resolve it during
+synthesis/review; do not silently erase it. Reorganizing preserves unchanged completed tasks,
+resets changed task definitions, and refuses removing/changing a running task until released.
+Changing range manifests invalidates completed task receipts and requires the affected work
+to be accounted for again. No publication until all queued tasks are complete and each entry
+flow is represented with its evidence in the publication plan. The independent reviewer must
+also check missed entry points; the schema cannot prove trigger discovery is exhaustive.
+
+## Fresh initialization policy
+
+There is no repair command. The user prepares a clean selected-repository state before a new
+initialization. Never automatically delete documentation or a completed run. Interrupted active
+runs can still resume their pinned snapshot; recover only rolls back interrupted publication.
 
 This protocol belongs only to the initial repository-analysis skill. The coordinator owns the
 publication plan; exploratory and independent-review agents only produce intermediate evidence.

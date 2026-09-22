@@ -4,7 +4,11 @@ The six skills contain identical copies of this versioned brain runtime; each ca
 independently. The bootstrap skill additionally contains its own snapshot/coverage runtime
 and publication protocol. Thought refinement and linking use their additional thoughts runtime.
 The five ongoing skills use one agent; bootstrap delegates real
-explorers and a fresh reviewer, capped by `max_parallel_agents` (default 4).
+explorers and a fresh reviewer, capped by `max_parallel_agents` (default 4) active workers.
+This is a concurrency cap, not a cap on task count or total worker identities. Bootstrap
+discovers execution entry points, queues end-to-end flow and residual tasks, and replaces
+completed workers with fresh subagents as slots become free. Its task queue commands belong
+to bootstrap.sh only; the other five workflows keep their single-agent/source restrictions.
 Use Bash explicitly if execute permission was lost during unzip:
 
 ```bash
