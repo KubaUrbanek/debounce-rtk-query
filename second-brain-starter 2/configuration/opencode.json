@@ -1,0 +1,29 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "permission": {
+    "read": "allow",
+    "glob": "allow",
+    "grep": "allow",
+    "question": "allow",
+    "skill": {
+      "second-brain-map": "allow",
+      "second-brain-analyze": "allow",
+      "second-brain-organize": "allow"
+    },
+    "external_directory": {
+      "*": "ask",
+      "/Projects/*": "allow"
+    },
+    "edit": {
+      "*": "deny",
+      "config.json": "allow",
+      "state.json": "allow",
+      "index.md": "allow",
+      "open-questions.md": "allow",
+      "repositories/*": "allow",
+      "domain/*": "allow",
+      "/Projects/pkr-tool-docs/*": "allow"
+    },
+    "bash": "ask"
+  }
+}

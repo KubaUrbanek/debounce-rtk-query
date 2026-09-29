@@ -1,0 +1,10 @@
+{
+  "repositories": [
+    {
+      "id": "orders-api",
+      "path": "/Projects/orders-api",
+      "remote": "origin",
+      "branch": "develop"
+    }
+  ]
+}
