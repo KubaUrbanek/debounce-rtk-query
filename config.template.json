@@ -1,0 +1,107 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "default_agent": "build",
+  "model": "__WEAK_MODEL__",
+  "agent": {
+    "build": {
+      "description": "Implementuje zadania; zleca review zmian zachowania subagentowi reviewer.",
+      "mode": "primary",
+      "model": "__WEAK_MODEL__",
+      "prompt": "{file:./.opencode/prompts/build.md}",
+      "permission": {
+        "*": "ask",
+        "read": {
+          "*": "allow",
+          "*.env": "deny",
+          "*.env.*": "deny",
+          "*.env.example": "allow"
+        },
+        "glob": "allow",
+        "grep": "allow",
+        "skill": "allow",
+        "question": "allow",
+        "edit": "allow",
+        "bash": "ask",
+        "task": {
+          "*": "deny",
+          "explore": "allow",
+          "reviewer": "allow"
+        },
+        "external_directory": "ask",
+        "doom_loop": "ask"
+      }
+    },
+    "plan": {
+      "description": "Analizuje kod i tworzy plan dla build; bez edycji.",
+      "mode": "primary",
+      "model": "__STRONG_MODEL__",
+      "prompt": "{file:./.opencode/prompts/plan.md}",
+      "permission": {
+        "*": "deny",
+        "read": {
+          "*": "allow",
+          "*.env": "deny",
+          "*.env.*": "deny",
+          "*.env.example": "allow"
+        },
+        "glob": "allow",
+        "grep": "allow",
+        "skill": "allow",
+        "question": "allow",
+        "edit": "deny",
+        "bash": "deny",
+        "task": {
+          "*": "deny",
+          "explore": "allow"
+        },
+        "external_directory": "deny"
+      }
+    },
+    "explore": {
+      "description": "Wyszukuje kod, przepływy i przykłady; tylko odczyt.",
+      "mode": "subagent",
+      "model": "__WEAK_MODEL__",
+      "prompt": "{file:./.opencode/prompts/explore.md}",
+      "permission": {
+        "*": "deny",
+        "read": {
+          "*": "allow",
+          "*.env": "deny",
+          "*.env.*": "deny",
+          "*.env.example": "allow"
+        },
+        "glob": "allow",
+        "grep": "allow",
+        "skill": "allow",
+        "question": "allow",
+        "edit": "deny",
+        "bash": "deny",
+        "task": "deny",
+        "external_directory": "deny"
+      }
+    },
+    "reviewer": {
+      "description": "Sprawdza diff i zgodność zmian z zadaniem; tylko odczyt.",
+      "mode": "subagent",
+      "model": "__STRONG_MODEL__",
+      "prompt": "{file:./.opencode/prompts/reviewer.md}",
+      "permission": {
+        "*": "deny",
+        "read": {
+          "*": "allow",
+          "*.env": "deny",
+          "*.env.*": "deny",
+          "*.env.example": "allow"
+        },
+        "glob": "allow",
+        "grep": "allow",
+        "skill": "allow",
+        "question": "allow",
+        "edit": "deny",
+        "bash": "deny",
+        "task": "deny",
+        "external_directory": "deny"
+      }
+    }
+  }
+}
